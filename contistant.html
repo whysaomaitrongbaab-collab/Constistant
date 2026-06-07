@@ -1,0 +1,1754 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Constistant Shell</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&family=Sora:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --color-primary: hsl(218, 75%, 50%);
+      --color-primary-pressed: hsl(218, 75%, 42%);
+      --color-primary-active: hsl(218, 75%, 35%);
+      --color-on-primary: #ffffff;
+
+      --color-panel-sidebar: hsl(200, 8%, 13%);
+      --color-panel-header: hsl(200, 8%, 11%);
+      --color-panel-properties: hsl(200, 8%, 98%);
+      --color-canvas-dark: hsl(200, 8%, 10%);
+      --color-canvas-light: hsl(200, 8%, 98%);
+      --color-border-panel: hsl(200, 8%, 18%);
+      --color-border-default: hsl(200, 8%, 88%);
+      --color-surface-row: hsl(200, 5%, 96%);
+      --color-surface-row-hover: hsl(218, 30%, 94%);
+      --color-text-primary: hsl(200, 8%, 12%);
+      --color-text-secondary: hsl(200, 8%, 40%);
+      --color-text-disabled: hsl(200, 8%, 65%);
+      --color-text-on-dark: #ffffff;
+      --color-text-on-dark-mute: rgba(255,255,255,0.65);
+
+      --shell-height-topbar: 48px;
+      --shell-height-tabbar: 40px;
+      --shell-height-statusbar: 28px;
+      --panel-left-width: 240px;
+      --panel-right-width: 280px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      font-family: 'Sarabun', sans-serif;
+      color: var(--color-text-primary);
+      background: var(--color-panel-header);
+    }
+
+    body {
+      min-width: 1280px;
+    }
+
+    .shell {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    .topbar {
+      height: var(--shell-height-topbar);
+      background: var(--color-panel-header);
+      border-bottom: 1px solid var(--color-border-panel);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      color: var(--color-text-on-dark);
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .topbar__brand {
+      flex: 1;
+    }
+
+    .tabbar {
+      height: var(--shell-height-tabbar);
+      background: var(--color-panel-header);
+      border-bottom: 1px solid var(--color-border-panel);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 24px;
+      align-items: center;
+      height: 100%;
+    }
+
+    .tab {
+      position: relative;
+      padding: 0 6px;
+      color: var(--color-text-on-dark-mute);
+      font-size: 13px;
+      font-weight: 500;
+      line-height: 40px;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .tab--active {
+      color: var(--color-text-on-dark);
+    }
+
+    .tab--active::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 2px;
+      background: var(--color-primary);
+    }
+
+    .main {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .sidebar {
+      width: var(--panel-left-width);
+      background: var(--color-panel-sidebar);
+      border-right: 1px solid var(--color-border-panel);
+      padding: 16px 0;
+      color: var(--color-text-on-dark-mute);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar__header {
+      padding: 0 16px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+    }
+
+    .sidebar__tree {
+      padding: 0;
+      margin: 0;
+      list-style: none;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .sidebar__item {
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--color-text-on-dark-mute);
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .sidebar__item + .sidebar__item {
+      margin-top: 4px;
+    }
+
+    .sidebar__item--selected {
+      background: var(--color-primary);
+      color: var(--color-text-on-dark);
+      font-weight: 600;
+      border-radius: 4px;
+    }
+
+    .sidebar__item-icon {
+      width: 16px;
+      height: 16px;
+      border-radius: 2px;
+      background: rgba(255,255,255,0.15);
+      flex-shrink: 0;
+    }
+
+    .canvas {
+      flex: 1;
+      min-width: 0;
+      min-height: 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .canvas-panel,
+    .qt-module {
+      position: absolute;
+      inset: 0;
+      display: none;
+      width: 100%;
+      height: 100%;
+    }
+
+    .canvas-panel.active,
+    .qt-module.active {
+      display: flex;
+    }
+
+    .canvas-panel--dark {
+      background: var(--color-canvas-dark);
+      color: var(--color-text-on-dark);
+      align-items: center;
+      justify-content: center;
+    }
+
+    .canvas-panel--light {
+      background: var(--color-canvas-light);
+      color: var(--color-text-primary);
+      align-items: center;
+      justify-content: center;
+    }
+
+    .canvas-panel__inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      gap: 16px;
+      padding: 32px;
+      width: 100%;
+      max-width: 520px;
+    }
+
+    .canvas-panel__icon {
+      font-size: 56px;
+      line-height: 1;
+    }
+
+    .canvas-panel__title {
+      font-size: 22px;
+      font-weight: 600;
+      line-height: 1.3;
+      margin: 0;
+    }
+
+    .canvas-panel__description {
+      font-size: 15px;
+      line-height: 1.4;
+      max-width: 460px;
+      margin: 0;
+    }
+
+    .qt-module {
+      position: absolute;
+      inset: 0;
+      display: none;
+      width: 100%;
+      height: 100%;
+      flex-direction: column;
+      overflow: auto;
+      background: var(--color-canvas-light);
+    }
+
+    .properties {
+      width: var(--panel-right-width);
+      background: var(--color-panel-properties);
+      border-left: 1px solid var(--color-border-default);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .properties__header {
+      padding: 16px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--color-text-primary);
+      border-bottom: 1px solid var(--color-border-default);
+    }
+
+    .properties__body {
+      padding: 16px;
+      overflow-y: auto;
+      color: var(--color-text-primary);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .properties__field {
+      margin-bottom: 16px;
+    }
+
+    .properties__field-label {
+      display: block;
+      color: var(--color-text-secondary);
+      font-size: 12px;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      font-weight: 700;
+    }
+
+    .properties__field-value {
+      background: var(--color-surface-row);
+      border: 1px solid var(--color-border-default);
+      border-radius: 6px;
+      padding: 10px 12px;
+      color: var(--color-text-primary);
+      font-weight: 500;
+    }
+
+    .statusbar {
+      height: var(--shell-height-statusbar);
+      background: var(--color-panel-header);
+      border-top: 1px solid var(--color-border-panel);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      color: var(--color-text-on-dark-mute);
+      font-size: 12px;
+    }
+
+    .statusbar__tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 2px 8px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 999px;
+      color: var(--color-text-on-dark);
+      font-weight: 600;
+      margin-left: auto;
+    }
+  </style>
+  <style id="quantitake-styles">
+.qt-module *, .qt-module *::before, .qt-module *::after{box-sizing:border-box;margin:0;padding:0}
+.qt-module{scroll-behavior:smooth;position:relative}
+.qt-module::before{
+  content:'';position:absolute;inset:0;pointer-events:none;z-index:0;
+  background-image:linear-gradient(rgba(34,211,238,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(34,211,238,.03) 1px,transparent 1px);
+  background-size:48px 48px;
+}
+.qt-module ::-webkit-scrollbar{width:5px}
+.qt-module ::-webkit-scrollbar-track{background:var(--surface)}
+.qt-module ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+.qt-module header{
+  position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;
+  padding:14px 32px;background:rgba(3,7,18,.9);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);
+}
+.qt-module .logo{display:flex;align-items:center;gap:12px}
+.qt-module .logo-icon{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:20px}
+.qt-module .logo-title{font-weight:800;font-size:16px;letter-spacing:-.03em}
+.qt-module .logo-sub{color:var(--muted);font-size:11px;margin-top:1px}
+.qt-module #status-pill{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+.qt-module .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.qt-module .phase-bar{display:flex;align-items:center;gap:0;margin-bottom:4px}
+.qt-module .phase-step{display:flex;align-items:center;gap:8px;flex:1}
+.qt-module .phase-num{
+  width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:800;border:2px solid var(--border);color:var(--muted);background:var(--surface2);
+  transition:all .3s;flex-shrink:0;
+}
+.qt-module .phase-step.active .phase-num{border-color:var(--accent);color:var(--accent);background:#22d3ee18}
+.qt-module .phase-step.done .phase-num{border-color:var(--green);color:var(--green);background:#10b98118}
+.qt-module .phase-label{font-size:11px;font-weight:600;color:var(--muted);transition:color .3s}
+.qt-module .phase-step.active .phase-label{color:var(--accent)}
+.qt-module .phase-step.done .phase-label{color:var(--green)}
+.qt-module .phase-line{width:32px;height:2px;background:var(--border);margin:0 6px;flex-shrink:0;transition:background .3s}
+.qt-module .phase-line.done{background:var(--green)}
+.qt-module main{position:relative;z-index:1;max-width:900px;margin:0 auto;padding:32px 20px 80px;display:flex;flex-direction:column;gap:24px;animation:fadeUp .5s ease both}
+.qt-module .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px 24px;transition:border-color .2s}
+.qt-module .card:focus-within{border-color:#22d3ee44}
+.qt-module .section-label{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.qt-module .step-num{width:24px;height:24px;border-radius:50%;background:#22d3ee18;border:1px solid #22d3ee44;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:var(--accent);flex-shrink:0}
+.qt-module .section-label>span:last-child{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#94a3b8}
+.qt-module .key-row{display:flex;gap:8px}
+.qt-module .key-input{flex:1;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px;outline:none;font-family:'JetBrains Mono',monospace;transition:border-color .2s}
+.qt-module .key-input:focus{border-color:var(--accent)}
+.qt-module .key-toggle{background:var(--border);border:none;border-radius:8px;padding:0 14px;color:var(--muted);cursor:pointer;font-size:16px}
+.qt-module .key-hint{color:var(--dim);font-size:11px;margin-top:8px}
+.qt-module details{margin-top:12px}
+.qt-module summary{color:var(--accent);font-size:11px;font-weight:600;cursor:pointer;user-select:none;list-style:none}
+.qt-module summary::marker, .qt-module summary::-webkit-details-marker{display:none}
+.qt-module .deploy-guide{margin-top:10px;background:var(--surface2);border-radius:8px;padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#94a3b8;line-height:2;border:1px solid var(--border)}
+.qt-module .drop-zone{border:2px dashed var(--border);border-radius:14px;padding:40px 24px;text-align:center;cursor:pointer;background:var(--surface2);transition:all .25s}
+.qt-module .drop-zone:hover,.qt-module .drop-zone.drag{border-color:var(--accent);background:#22d3ee08}
+.qt-module .drop-zone.has-file{border-color:var(--green);background:#10b98108;border-style:solid}
+.qt-module .drop-zone input{display:none}
+.qt-module .dz-icon{font-size:36px;margin-bottom:10px}
+.qt-module .dz-title{font-weight:700;font-size:14px;color:#cbd5e1}
+.qt-module .dz-sub{font-size:12px;color:var(--muted);margin-top:6px}
+.qt-module .dz-file{font-weight:700;font-size:14px;color:var(--green)}
+.qt-module .dz-size{font-size:12px;color:var(--muted);margin-top:4px}
+.qt-module .chips{display:flex;flex-wrap:wrap;gap:8px}
+.qt-module .chip{display:inline-flex;align-items:center;gap:6px;padding:7px 15px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1.5px solid var(--border);background:transparent;color:var(--muted);transition:all .15s;user-select:none}
+.qt-module .chip.active{border-color:var(--accent);background:#22d3ee18;color:var(--accent)}
+.qt-module .chip .chip-sub{opacity:.5;font-size:10px}
+.qt-module textarea{width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:12px 16px;color:var(--text);font-size:13px;resize:vertical;outline:none;font-family:inherit;transition:border-color .2s;min-height:80px}
+.qt-module textarea:focus{border-color:var(--accent)}
+.qt-module .btn-primary{width:100%;padding:15px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:var(--bg);border:none;border-radius:12px;font-weight:800;font-size:15px;cursor:pointer;font-family:inherit;transition:all .2s;animation:glow 3s ease-in-out infinite;display:flex;align-items:center;justify-content:center;gap:10px}
+.qt-module .btn-primary:hover:not(:disabled){transform:translateY(-2px);filter:brightness(1.1)}
+.qt-module .btn-primary:disabled{background:var(--surface2);color:var(--dim);border:1px solid var(--border);animation:none;cursor:not-allowed}
+.qt-module .btn-secondary{padding:11px 24px;background:var(--surface2);color:var(--text);border:1.5px solid var(--border);border-radius:10px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;transition:all .2s;display:inline-flex;align-items:center;gap:8px}
+.qt-module .btn-secondary:hover{border-color:var(--accent);color:var(--accent)}
+.qt-module .btn-green{padding:11px 28px;background:linear-gradient(135deg,var(--green),#059669);color:#fff;border:none;border-radius:10px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;transition:all .2s;display:inline-flex;align-items:center;gap:8px;animation:glow 3s ease-in-out infinite}
+.qt-module .btn-green:hover{transform:translateY(-1px);filter:brightness(1.1)}
+.qt-module #error-box{display:none;background:#ef444412;border:1px solid #ef444430;border-radius:10px;padding:14px 18px;color:#fca5a5;font-size:13px}
+.qt-module #progress{display:none;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px}
+.qt-module .progress-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 1.2s ease-in-out infinite;flex-shrink:0}
+.qt-module #progress-msg{font-size:13px;color:#94a3b8;font-weight:600}
+.qt-module #review-section{display:none;animation:fadeUp .4s ease both}
+.qt-module .review-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+.qt-module .review-title{font-size:13px;font-weight:700;color:#94a3b8;letter-spacing:.08em;text-transform:uppercase}
+.qt-module .review-hint{font-size:12px;color:var(--muted);margin-bottom:20px;padding:10px 14px;background:var(--surface2);border-left:3px solid var(--accent);border-radius:0 8px 8px 0}
+.qt-module .el-card{background:var(--surface2);border:1.5px solid var(--border);border-radius:14px;margin-bottom:14px;overflow:hidden;transition:border-color .2s}
+.qt-module .el-card:hover{border-color:#22d3ee33}
+.qt-module .el-card-header{display:flex;align-items:center;justify-content:space-between;padding:13px 18px;background:#080e1c;border-bottom:1px solid var(--border)}
+.qt-module .el-id-input{background:transparent;border:none;outline:none;font-family:'Sora',sans-serif;font-size:15px;font-weight:800;color:var(--accent);width:80px;letter-spacing:-.02em}
+.qt-module .el-type-badge{font-size:10px;font-weight:700;color:var(--muted);background:var(--border);padding:3px 8px;border-radius:6px;text-transform:uppercase;letter-spacing:.06em}
+.qt-module .el-delete{background:none;border:none;color:var(--dim);cursor:pointer;font-size:16px;padding:4px 8px;border-radius:6px;transition:all .2s}
+.qt-module .el-delete:hover{background:#ef444420;color:var(--red)}
+.qt-module .el-body{padding:16px 18px}
+.qt-module .field-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.qt-module .field-group{display:flex;flex-direction:column;gap:5px}
+.qt-module .field-label{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+.qt-module .field-input{
+  background:var(--surface);border:1.5px solid var(--border);border-radius:8px;
+  padding:9px 12px;color:var(--text);font-size:13px;font-family:'JetBrains Mono',monospace;
+  outline:none;transition:border-color .2s;width:100%;
+}
+.qt-module .field-input:focus{border-color:var(--accent)}
+.qt-module .field-input.estimated{border-color:var(--yellow);color:var(--yellow)}
+.qt-module .field-unit{font-size:10px;color:var(--dim);margin-top:3px}
+.qt-module .steel-section{border-top:1px solid var(--border);padding-top:14px;margin-top:4px}
+.qt-module .steel-section-title{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
+.qt-module .steel-row{display:grid;grid-template-columns:auto 1fr 1fr auto;gap:8px;align-items:center;margin-bottom:8px}
+.qt-module .steel-pos{font-size:11px;font-weight:700;color:var(--muted);min-width:64px}
+.qt-module .steel-input{background:var(--surface);border:1.5px solid var(--border);border-radius:7px;padding:8px 10px;color:var(--text);font-size:12px;font-family:'JetBrains Mono',monospace;outline:none;transition:border-color .2s;width:100%}
+.qt-module .steel-input:focus{border-color:var(--accent)}
+.qt-module .steel-between{font-size:12px;color:var(--dim);text-align:center}
+.qt-module .bar-type-toggle{display:inline-flex;border-radius:6px;overflow:hidden;border:1.5px solid var(--border);flex-shrink:0}
+.qt-module .section-block{border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-top:10px;background:#ffffff06}
+.qt-module .section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.qt-module .section-label{font-size:11px;font-weight:700;color:var(--accent);letter-spacing:.06em;text-transform:uppercase}
+.qt-module .bar-type-btn{padding:5px 9px;font-size:11px;font-weight:800;background:transparent;border:none;color:var(--muted);cursor:pointer;font-family:inherit;transition:all .15s;letter-spacing:.03em}
+.qt-module .bar-type-btn.active-db{background:#22d3ee22;color:var(--accent)}
+.qt-module .bar-type-btn.active-rb{background:#f59e0b22;color:var(--yellow)}
+.qt-module .estimated-badge{font-size:9px;font-weight:700;color:var(--yellow);background:#f59e0b18;border:1px solid #f59e0b40;padding:2px 6px;border-radius:4px;margin-left:8px}
+.qt-module .add-el-btn{width:100%;padding:12px;border:2px dashed var(--border);border-radius:12px;background:transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.qt-module .add-el-btn:hover{border-color:var(--accent);color:var(--accent);background:#22d3ee08}
+.qt-module .review-actions{display:flex;justify-content:flex-end;gap:12px;margin-top:8px;flex-wrap:wrap}
+.qt-module .calc-options-box{background:var(--surface2);border:1.5px solid var(--border);border-radius:14px;padding:16px 18px;margin-top:20px}
+.qt-module .calc-options-title{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.qt-module .calc-options-title::before{content:'⚙️'}
+.qt-module .calc-chips{display:flex;flex-wrap:wrap;gap:8px}
+.qt-module .calc-chip{display:inline-flex;align-items:center;gap:7px;padding:8px 16px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1.5px solid var(--border);background:transparent;color:var(--muted);transition:all .15s;user-select:none;line-height:1}
+.qt-module .calc-chip .cc-icon{font-size:14px}
+.qt-module .calc-chip .cc-sub{font-size:10px;opacity:.5;margin-left:2px}
+.qt-module .calc-chip.active{border-color:var(--accent);background:#22d3ee18;color:var(--accent)}
+.qt-module .calc-chip.active-green{border-color:var(--green);background:#10b98118;color:var(--green)}
+.qt-module .calc-chip.active-yellow{border-color:var(--yellow);background:#f59e0b18;color:var(--yellow)}
+.qt-module .summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px}
+.qt-module .summary-cell{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center}
+.qt-module .s-val{font-size:22px;font-weight:800;letter-spacing:-.03em;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.qt-module .s-unit{font-size:11px;color:var(--muted);margin-top:2px}
+.qt-module .s-label{font-size:11px;color:var(--dim);margin-top:6px;font-weight:600}
+.qt-module .beam-cards{display:flex;flex-direction:column;gap:14px}
+.qt-module .beam-card{background:var(--surface2);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:border-color .2s}
+.qt-module .beam-card:hover{border-color:#22d3ee33}
+.qt-module .beam-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:#080e1c;border-bottom:1px solid var(--border);cursor:pointer}
+.qt-module .beam-id-block{display:flex;align-items:center;gap:10px}
+.qt-module .beam-id{font-size:15px;font-weight:800;color:var(--accent)}
+.qt-module .beam-size{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);background:var(--border);padding:3px 8px;border-radius:6px}
+.qt-module .beam-chevron{color:var(--muted);transition:transform .2s;font-size:12px}
+.qt-module .beam-card.open .beam-chevron{transform:rotate(180deg)}
+.qt-module .beam-body{display:none;padding:16px 18px}
+.qt-module .beam-card.open .beam-body{display:block}
+.qt-module .qty-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.qt-module .qty-pill{display:flex;flex-direction:column;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 16px;min-width:90px}
+.qt-module .qp-val{font-size:16px;font-weight:800;color:var(--text)}
+.qt-module .qp-unit{font-size:10px;color:var(--accent);font-weight:700;margin-top:1px}
+.qt-module .qp-label{font-size:10px;color:var(--muted);margin-top:4px}
+.qt-module .steel-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+.qt-module .steel-table th{background:#080e1c;color:var(--muted);font-weight:700;padding:7px 10px;text-align:left;font-size:10px;letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.qt-module .steel-table td{padding:7px 10px;border-bottom:1px solid #0f172a;color:#cbd5e1}
+.qt-module .steel-table tr:last-child td{border-bottom:none}
+.qt-module .steel-table tr:hover td{background:#0f172a55}
+.qt-module .result-topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px}
+.qt-module .result-title-txt{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#94a3b8}
+.qt-module .copy-btn{background:var(--border);border:none;border-radius:6px;padding:6px 16px;font-size:11px;font-weight:700;color:#94a3b8;cursor:pointer;font-family:inherit;transition:all .2s}
+.qt-module .copy-btn:hover{background:var(--dim)}
+.qt-module .copy-btn.copied{background:var(--green);color:#fff}
+.qt-module .result-actions{display:flex;gap:10px}
+.qt-module .warn-box{background:#f59e0b12;border:1px solid #f59e0b30;border-radius:8px;padding:10px 14px;color:#fcd34d;font-size:12px;margin-bottom:14px}
+.qt-module .modal-overlay{position:absolute;inset:0;background:#000a;z-index:200;display:flex;align-items:center;justify-content:center;padding:20px}
+.qt-module .modal-box{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:24px;max-width:520px;width:100%;max-height:85vh;overflow-y:auto}
+.qt-module .modal-title{font-size:14px;font-weight:800;color:var(--accent);margin-bottom:6px}
+.qt-module .modal-sub{font-size:12px;color:var(--muted);margin-bottom:18px;line-height:1.6}
+.qt-module .page-thumb-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px}
+.qt-module .page-thumb{border:2px solid var(--border);border-radius:8px;overflow:hidden;cursor:pointer;transition:all .15s;position:relative}
+.qt-module .page-thumb:hover{border-color:var(--accent)}
+.qt-module .page-thumb.selected{border-color:var(--accent);background:#22d3ee18}
+.qt-module .page-thumb.selected::after{content:'✓';position:absolute;top:4px;right:6px;color:var(--accent);font-weight:800;font-size:13px;text-shadow:0 0 4px #000}
+.qt-module .page-thumb img{width:100%;display:block;object-fit:contain;background:#111}
+.qt-module .page-thumb-label{font-size:10px;color:var(--muted);text-align:center;padding:4px 2px;background:var(--surface2)}
+.qt-module .modal-btns{display:flex;gap:10px;justify-content:flex-end}
+.qt-module .modal-hint{background:#22d3ee0a;border:1px solid #22d3ee22;border-radius:8px;padding:10px 14px;font-size:11px;color:#94a3b8;margin-bottom:14px;line-height:1.6}
+.qt-module .dia-breakdown{margin-top:10px;display:flex;flex-direction:column;gap:4px;width:100%;text-align:left}
+.qt-module .dia-row{display:flex;justify-content:space-between;align-items:center;padding:3px 6px;background:#22d3ee0a;border-radius:5px}
+.qt-module .dia-tag{font-size:10px;font-weight:800;color:var(--accent);letter-spacing:.04em}
+.qt-module .dia-kg{font-size:11px;font-weight:700;color:#94a3b8}
+.qt-module .qty-pill-dia{border-color:#22d3ee33;min-width:72px}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="topbar__brand">Constistant</div>
+      <div>Project Switcher</div>
+    </header>
+    <nav class="tabbar">
+      <div class="tabs">
+        <a href="#" class="tab tab--active" data-module="Drawing Intelligence">Drawing Intelligence</a>
+        <a href="#" class="tab" data-module="Readiness Check">Readiness Check</a>
+        <a href="#" class="tab" data-module="QuantiTake">QuantiTake</a>
+        <a href="#" class="tab" data-module="Planner">Planner</a>
+        <a href="#" class="tab" data-module="Resource Hub">Resource Hub</a>
+      </div>
+    </nav>
+    <main class="main">
+      <aside class="sidebar">
+        <div class="sidebar__header">Project Browser</div>
+        <ul class="sidebar__tree">
+          <li class="sidebar__item sidebar__item--selected" data-sheet="Site drawings"><span class="sidebar__item-icon"></span>Site drawings</li>
+          <li class="sidebar__item" data-sheet="Structural BOQ"><span class="sidebar__item-icon"></span>Structural BOQ</li>
+          <li class="sidebar__item" data-sheet="Sheet S-101"><span class="sidebar__item-icon"></span>Sheet S-101</li>
+          <li class="sidebar__item" data-sheet="Sheet S-102"><span class="sidebar__item-icon"></span>Sheet S-102</li>
+          <li class="sidebar__item" data-sheet="Rebar schedule"><span class="sidebar__item-icon"></span>Rebar schedule</li>
+          <li class="sidebar__item" data-sheet="Project notes"><span class="sidebar__item-icon"></span>Project notes</li>
+        </ul>
+      </aside>
+      <section class="canvas" id="canvas">
+        <div class="canvas-panel canvas-panel--dark active" data-module="Drawing Intelligence" id="panel-drawing">
+          <div class="canvas-panel__inner">
+            <div class="canvas-panel__icon">🗺️</div>
+            <h1 class="canvas-panel__title">Drawing Intelligence</h1>
+            <p class="canvas-panel__description">สกัดพารามิเตอร์จากแบบ 2D แล้วสรุปเป็นข้อมูลโครงสร้าง</p>
+          </div>
+        </div>
+        <div class="canvas-panel canvas-panel--light" data-module="Readiness Check" id="panel-readiness">
+          <div class="canvas-panel__inner">
+            <div class="canvas-panel__icon">✅</div>
+            <h1 class="canvas-panel__title">Readiness Check</h1>
+            <p class="canvas-panel__description">ตรวจสอบความพร้อมงานก่อสร้างและรายงานจุดที่ต้องแก้ไข</p>
+          </div>
+        </div>
+        <div class="canvas-panel canvas-panel--light" data-module="Planner" id="panel-planner">
+          <div class="canvas-panel__inner">
+            <div class="canvas-panel__icon">📅</div>
+            <h1 class="canvas-panel__title">Planner</h1>
+            <p class="canvas-panel__description">วางแผนงาน กำหนดไทม์ไลน์ และติดตามความคืบหน้า</p>
+          </div>
+        </div>
+        <div class="canvas-panel canvas-panel--light" data-module="Resource Hub" id="panel-resource">
+          <div class="canvas-panel__inner">
+            <div class="canvas-panel__icon">👥</div>
+            <h1 class="canvas-panel__title">Resource Hub</h1>
+            <p class="canvas-panel__description">จัดการแรงงาน วัสดุ และผู้รับเหมาอย่างเป็นระบบ</p>
+          </div>
+        </div>
+        <div class="qt-module" id="qt-module" style="display:none;height:100%;overflow-y:auto;padding:24px;">
+<header>
+  <div class="logo">
+    <div class="logo-icon">📐</div>
+    <div>
+      <div class="logo-title">QuantiTake</div>
+      <div class="logo-sub">Structural Quantity Takeoff · Gemini Vision</div>
+    </div>
+  </div>
+  <div id="status-pill">
+    <div class="dot" id="status-dot" style="background:#334155"></div>
+    <span id="status-text">Ready</span>
+  </div>
+</header>
+
+<main>
+
+  <div class="phase-bar" id="phase-bar">
+    <div class="phase-step active" id="ps-1">
+      <div class="phase-num">1</div>
+      <div class="phase-label">Upload & Config</div>
+    </div>
+    <div class="phase-line" id="pl-1"></div>
+    <div class="phase-step" id="ps-2">
+      <div class="phase-num">2</div>
+      <div class="phase-label">Review & Edit</div>
+    </div>
+    <div class="phase-line" id="pl-2"></div>
+    <div class="phase-step" id="ps-3">
+      <div class="phase-num">3</div>
+      <div class="phase-label">Results</div>
+    </div>
+  </div>
+
+  <div id="phase1">
+
+    <div class="card">
+      <div class="section-label"><div class="step-num">🔑</div><span>Gemini API Key</span></div>
+      <div class="key-row">
+        <input class="key-input" type="password" id="api-key" placeholder="AIza..." autocomplete="off" spellcheck="false">
+        <button class="key-toggle" id="key-toggle" onclick="qt_toggleKey()">👁</button>
+      </div>
+      <div class="key-hint">สมัครฟรีที่ aistudio.google.com · Key ไม่ถูกบันทึก</div>
+      <details>
+        <summary>📖 วิธี Hardcode Key ตอน deploy</summary>
+        <div class="deploy-guide">
+          หา <span style="color:#10b981">const API_KEY = ""</span> แล้วใส่ key ของคุณ<br>
+          <span style="color:#64748b">⚠️ อย่า push ขึ้น GitHub public</span>
+        </div>
+      </details>
+    </div>
+
+    <div class="card">
+      <div class="section-label"><div class="step-num">1</div><span>Upload Drawing</span></div>
+      <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()"
+           ondragover="qt_onDragOver(event)" ondragleave="qt_onDragLeave()" ondrop="qt_onDrop(event)">
+        <input type="file" id="file-input" accept=".pdf,image/jpeg,image/png,image/webp" onchange="qt_onFileChange(event)">
+        <div class="dz-icon" id="dz-icon">⬆️</div>
+        <div id="dz-main">
+          <div class="dz-title">Drop PDF here or click to upload</div>
+          <div class="dz-sub">PDF · JPG · PNG · WEBP</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="page-modal" style="display:none">
+      <div class="modal-box">
+        <div class="modal-title">🗺️ เลือกหน้าผังโครงสร้างที่ต้องการนับคาน</div>
+        <div class="modal-sub">AI พบหน้าที่อาจเป็นผังโครงสร้างหลายหน้า — กรุณา <strong style="color:var(--accent)">tick เลือกทุกหน้าที่มีคาน</strong> (ชั้นล่าง + ชั้นบน) และไม่ต้องเลือกผังฐานราก หรือผังหลังคา</div>
+        <div class="modal-hint">💡 ผังโครงสร้างคานจะมี label B1, B2... วางบนเส้น grid — ผังฐานรากจะมี F1, C1 เป็นหลัก</div>
+        <div class="page-thumb-grid" id="page-thumb-grid"></div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:12px" id="modal-selected-count">เลือกแล้ว 0 หน้า</div>
+        <div class="modal-btns">
+          <button class="btn-secondary" onclick="qt_closePageModal(false)">ข้ามขั้นตอนนี้</button>
+          <button class="btn-green" onclick="qt_closePageModal(true)">✓ ยืนยัน</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-label"><div class="step-num">2</div><span>Structural Elements</span></div>
+        <div class="chips" id="element-chips">
+        <div class="chip" data-id="beam" onclick="qt_toggleChip(this)">━ Beam <span class="chip-sub">คาน</span></div>
+        <div class="chip" data-id="column" onclick="qt_toggleChip(this)">┃ Column <span class="chip-sub">เสา</span></div>
+        <div class="chip" data-id="slab" onclick="qt_toggleChip(this)">▬ Slab <span class="chip-sub">พื้น</span></div>
+        <div class="chip" data-id="footing" onclick="qt_toggleChip(this)">⬛ Footing <span class="chip-sub">ฐานราก</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-label"><div class="step-num">3</div><span>Special Instructions (optional)</span></div>
+      <textarea id="extra-note" rows="4" placeholder="เช่น:&#10;- B1 มีแค่ 1 section (ไม่มี 2-section), จำนวน 6 ตัว L=3.0m&#10;- B2 มี 2 sections (L/4 ปลาย, L/2 กลาง), จำนวน 4 ตัว L=6.0m&#10;- คำนวณเฉพาะ B1, B2"></textarea>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;opacity:.7">💡 ถ้า AI นับจำนวนหรือ section ผิด — ระบุตรงนี้เพื่อ override ได้เลย</div>
+    </div>
+
+    <div id="progress">
+      <div class="progress-dot"></div>
+      <span id="progress-msg">Processing…</span>
+    </div>
+
+    <button class="btn-primary" id="run-btn" onclick="qt_runRead()">🔍 Read Drawing with AI</button>
+    <div id="error-box"></div>
+
+  </div>
+
+  <div id="review-section">
+    <div class="review-header">
+      <div class="review-title">✏️ Review & Edit — ตรวจสอบค่าที่ AI อ่านได้</div>
+      <button class="btn-secondary" onclick="qt_goBack()">← แก้ไฟล์ใหม่</button>
+    </div>
+    <div class="review-hint">
+      🟡 <b>สีเหลือง</b> = AI ไม่แน่ใจ ควรตรวจสอบ · แก้ไขตัวเลขได้ทุกช่อง · กด <b>+ Add Element</b> เพื่อเพิ่มหน้าตัดที่ AI อ่านไม่ได้
+    </div>
+    <div id="el-cards-container"></div>
+    <button class="add-el-btn" onclick="qt_addElement()">+ Add Element</button>
+
+    <div class="calc-options-box">
+      <div class="calc-options-title">เลือกรายการที่ต้องการคำนวณ</div>
+      <div class="calc-chips" id="calc-chips">
+        <div class="calc-chip active active-green" data-calc="concrete" onclick="qt_toggleCalcChip(this)">
+          <span class="cc-icon">🧱</span> Volume Concrete <span class="cc-sub">m³</span>
+        </div>
+        <div class="calc-chip active active-yellow" data-calc="formwork" onclick="qt_toggleCalcChip(this)">
+          <span class="cc-icon">🪵</span> Formwork <span class="cc-sub">m²</span>
+        </div>
+        <div class="calc-chip active" data-calc="steel" onclick="qt_toggleCalcChip(this)">
+          <span class="cc-icon">🔩</span> Rebar / Steel <span class="cc-sub">kg</span>
+        </div>
+        <div class="calc-chip" data-calc="stirrup" onclick="qt_toggleCalcChip(this)">
+          <span class="cc-icon">〰️</span> Stirrup Detail <span class="cc-sub">kg</span>
+        </div>
+        <div class="calc-chip" data-calc="bar_schedule" onclick="qt_toggleCalcChip(this)">
+          <span class="cc-icon">📋</span> Bar Schedule <span class="cc-sub">ตาราง</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="review-actions" style="margin-top:20px">
+      <button class="btn-green" onclick="qt_runCalculate()">⚡ Calculate Quantities</button>
+    </div>
+  </div>
+
+  <div id="result-section">
+    <div class="result-topbar">
+      <div class="result-title-txt">📊 Quantity Takeoff Result</div>
+      <div class="result-actions">
+        <button class="copy-btn" id="copy-btn" onclick="qt_copyResult()">Copy Summary</button>
+        <button class="btn-secondary" onclick="qt_goReview()">← Edit Values</button>
+      </div>
+    </div>
+    <div class="summary-grid">
+      <div class="summary-cell"><div class="s-val" id="tot-concrete">—</div><div class="s-unit">m³</div><div class="s-label">Total Concrete</div></div>
+      <div class="summary-cell"><div class="s-val" id="tot-steel">—</div><div class="s-unit">kg</div><div class="s-label">Total Steel</div><div id="steel-dia-breakdown" class="dia-breakdown" style="display:none"></div></div>
+      <div class="summary-cell"><div class="s-val" id="tot-formwork">—</div><div class="s-unit">m²</div><div class="s-label">Total Formwork</div></div>
+    </div>
+    <div class="beam-cards" id="beam-cards"></div>
+  </div>
+
+</main>
+        </div>
+      </section>
+      <aside class="properties">
+        <div class="properties__header">Properties</div>
+        <div class="properties__body">
+          <div class="properties__field">
+            <span class="properties__field-label">Selected sheet</span>
+            <div class="properties__field-value" id="properties-sheet">S-101</div>
+          </div>
+          <div class="properties__field">
+            <span class="properties__field-label">Status</span>
+            <div class="properties__field-value">Ready for review</div>
+          </div>
+          <div class="properties__field">
+            <span class="properties__field-label">Extracted item</span>
+            <div class="properties__field-value">Beam B3</div>
+          </div>
+          <div class="properties__field">
+            <span class="properties__field-label">Rebar count</span>
+            <div class="properties__field-value">24</div>
+          </div>
+        </div>
+      </aside>
+    </main>
+    <footer class="statusbar">
+      <div id="status-main">Project: อาคาร A · Sheet: S-101 · Last sync: 2 min ago</div>
+      <div class="statusbar__tag">3 Issues ⚠</div>
+    </footer>
+  </div>
+
+  <script>
+    const modulePlaceholders = {
+      'Drawing Intelligence': {
+        description: 'สกัดพารามิเตอร์จากแบบ 2D แล้วสรุปเป็นข้อมูลโครงสร้าง',
+        icon: '🗺️',
+        mode: 'dark'
+      },
+      'Readiness Check': {
+        description: 'ตรวจสอบความพร้อมงานก่อสร้างและรายงานจุดที่ต้องแก้ไข',
+        icon: '✅',
+        mode: 'light'
+      },
+      'Planner': {
+        description: 'วางแผนงาน กำหนดไทม์ไลน์ และติดตามความคืบหน้า',
+        icon: '📅',
+        mode: 'light'
+      },
+      'Resource Hub': {
+        description: 'จัดการแรงงาน วัสดุ และผู้รับเหมาอย่างเป็นระบบ',
+        icon: '👥',
+        mode: 'light'
+      }
+    };
+
+    function setActiveTab(moduleName) {
+      document.querySelectorAll('.tab').forEach(tab => {
+        if (tab.dataset.module === moduleName) {
+          tab.classList.add('tab--active');
+        } else {
+          tab.classList.remove('tab--active');
+        }
+      });
+
+      document.querySelectorAll('.canvas-panel').forEach(panel => {
+        panel.classList.toggle('active', panel.dataset.module === moduleName);
+      });
+
+      const qtModule = document.getElementById('qt-module');
+      if (moduleName === 'QuantiTake') {
+        qtModule.classList.add('active');
+        qtModule.style.display = 'flex';
+      } else {
+        qtModule.classList.remove('active');
+        qtModule.style.display = 'none';
+      }
+
+      const placeholder = modulePlaceholders[moduleName];
+      const canvas = document.getElementById('canvas');
+      if (placeholder) {
+        canvas.style.background = placeholder.mode === 'dark' ? 'var(--color-canvas-dark)' : 'var(--color-canvas-light)';
+      }
+    }
+
+    function updateStatusSheet(sheetName) {
+      const status = document.getElementById('status-main');
+      const sheetText = sheetName || 'Sheet: ไม่ระบุ';
+      status.textContent = `Project: อาคาร A · ${sheetText} · Last sync: 2 min ago`;
+      document.getElementById('properties-sheet').textContent = sheetName;
+    }
+
+    function handleTabClick(event) {
+      event.preventDefault();
+      const moduleName = event.currentTarget.dataset.module;
+      setActiveTab(moduleName);
+    }
+
+    function handleSidebarClick(event) {
+      const item = event.currentTarget;
+      document.querySelectorAll('.sidebar__item').forEach(i => i.classList.remove('sidebar__item--selected'));
+      item.classList.add('sidebar__item--selected');
+      const sheetName = item.dataset.sheet || item.textContent.trim();
+      updateStatusSheet(sheetName);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', handleTabClick));
+      document.querySelectorAll('.sidebar__item').forEach(item => item.addEventListener('click', handleSidebarClick));
+      setActiveTab('Drawing Intelligence');
+      updateStatusSheet('Sheet S-101');
+    });
+  </script>
+
+  <script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+  <script>
+    if (typeof pdfjsLib !== 'undefined') {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+    }
+  </script>
+
+  <script id="quantitake-scripts">
+// 🔑 Hardcode key ที่นี่ถ้าต้องการ:
+const qt_API_KEY = "";
+
+let qt_elementsData = [];
+const qt_UW = {6:.222,9:.499,10:.617,12:.888,16:1.578,19:2.226,20:2.466,25:3.853,28:4.834,32:6.313};
+const qt_steelUW = d => qt_UW[+d] || (0.006165*d*d);
+
+function qt_setPhase(n) {
+  [1,2,3].forEach(i => {
+    const ps = document.getElementById(`ps-${i}`);
+    ps.className = 'phase-step' + (i===n?' active':i<n?' done':'');
+  });
+  [1,2].forEach(i => {
+    const pl = document.getElementById(`pl-${i}`);
+    if(pl) pl.className = 'phase-line' + (i<n?' done':'');
+  });
+  document.getElementById('phase1').style.display        = n===1?'flex':'none';
+  document.getElementById('phase1').style.flexDirection  = 'column';
+  document.getElementById('phase1').style.gap            = '24px';
+  document.getElementById('review-section').style.display= n===2?'block':'none';
+  document.getElementById('result-section').style.display= n===3?'block':'none';
+}
+
+function qt_goBack()   { qt_setPhase(1); }
+function qt_goReview() { qt_renderReview(); qt_setPhase(2); }
+
+function qt_setStatus(s) {
+  const dot=document.getElementById('status-dot'), txt=document.getElementById('status-text');
+  const m={ready:['#334155','Ready'],loading:['#22d3ee','Analyzing…'],review:['#f59e0b','Review'],done:['#10b981','Complete'],error:['#ef4444','Error']};
+  const [c,l]=m[s]||m.ready;
+  dot.style.background=c; dot.style.boxShadow=s==='loading'?`0 0 6px ${c}`:'none';
+  txt.textContent=l; txt.style.color=c;
+}
+function qt_showError(msg){const el=document.getElementById('error-box');el.style.display='block';el.innerHTML='⚠️ '+msg;qt_setStatus('error');}
+function qt_hideError(){document.getElementById('error-box').style.display='none';}
+function qt_setProgress(msg){const el=document.getElementById('progress');if(msg){el.style.display='flex';document.getElementById('progress-msg').textContent=msg;}else{el.style.display='none';}}
+function qt_getActiveChips(id){return[...document.querySelectorAll(`#${id} .chip.active`)].map(c=>c.dataset.id);}
+function qt_fileToBase64(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(f);});}
+function qt_toggleKey(){const i=document.getElementById('api-key'),b=document.getElementById('key-toggle');i.type=i.type==='password'?'text':'password';b.textContent=i.type==='password'?'👁':'🙈';}
+
+let qt_selectedFile = null;
+let qt_pdfPageDataUrls = [];
+let qt_selectedLayoutPage = null;
+let qt_modalResolve = null;
+let qt_selectedLayoutPages = new Set();
+
+function qt_onDragOver(e){ e.preventDefault(); document.getElementById('drop-zone').classList.add('drag'); }
+function qt_onDragLeave(){ document.getElementById('drop-zone').classList.remove('drag'); }
+function qt_onDrop(e){ e.preventDefault(); document.getElementById('drop-zone').classList.remove('drag'); const f=e.dataTransfer.files[0]; if(f) qt_setFile(f); }
+function qt_onFileChange(e){ if(e.target.files[0]) qt_setFile(e.target.files[0]); }
+
+function qt_setFile(f){
+  qt_selectedFile=f; qt_pdfPageDataUrls=[]; qt_selectedLayoutPage=null;
+  const dz=document.getElementById('drop-zone');
+  dz.classList.add('has-file');
+  document.getElementById('dz-icon').textContent='📄';
+  document.getElementById('dz-main').innerHTML=`<div class="dz-file">${f.name}</div><div class="dz-size">${(f.size/1024).toFixed(1)} KB · คลิกเพื่อเปลี่ยน</div>`;
+}
+
+async function qt_extractPdfPages(file, scale=1.2) {
+  if(file.type !== 'application/pdf') {
+    const b64 = await qt_fileToBase64(file);
+    return [`data:${file.type};base64,${b64}`];
+  }
+  const ab = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({data: ab}).promise;
+  const pages = [];
+  for(let i=1; i<=pdf.numPages; i++){
+    const page = await pdf.getPage(i);
+    const vp = page.getViewport({scale});
+    const canvas = document.createElement('canvas');
+    canvas.width=vp.width; canvas.height=vp.height;
+    await page.render({canvasContext:canvas.getContext('2d'), viewport:vp}).promise;
+    pages.push(canvas.toDataURL('image/jpeg', scale<0.5 ? 0.5 : 0.85));
+  }
+  return pages;
+}
+
+function qt_showPageModal(candidateIndices, allPages) {
+  return new Promise(resolve => {
+    qt_modalResolve = resolve;
+    qt_selectedLayoutPages = new Set(candidateIndices);
+
+    const grid = document.getElementById('page-thumb-grid');
+    grid.innerHTML = '';
+
+    const toShow = [...new Set(candidateIndices)].sort((a,b)=>a-b);
+
+    function updateCount() {
+      document.getElementById('modal-selected-count').textContent =
+        `เลือกแล้ว ${qt_selectedLayoutPages.size} หน้า${qt_selectedLayoutPages.size===0?' — กรุณาเลือกอย่างน้อย 1 หน้า':''}`;
+    }
+
+    toShow.forEach(i => {
+      const div = document.createElement('div');
+      div.className = 'page-thumb' + (qt_selectedLayoutPages.has(i) ? ' selected' : '');
+      div.dataset.page = i;
+      div.innerHTML = `
+        <div style="position:absolute;top:6px;left:6px;z-index:2">
+          <input type="checkbox" ${qt_selectedLayoutPages.has(i)?'checked':''} style="width:16px;height:16px;accent-color:var(--accent)">
+        </div>
+        <img src="${allPages[i]}" style="padding-top:4px">
+        <div class="page-thumb-label">หน้า ${i+1}</div>`;
+      div.style.position='relative';
+      div.onclick = () => {
+        if(qt_selectedLayoutPages.has(i)){
+          qt_selectedLayoutPages.delete(i);
+          div.classList.remove('selected');
+          div.querySelector('input').checked=false;
+        } else {
+          qt_selectedLayoutPages.add(i);
+          div.classList.add('selected');
+          div.querySelector('input').checked=true;
+        }
+        updateCount();
+      };
+      grid.appendChild(div);
+    });
+
+    updateCount();
+    document.getElementById('page-modal').style.display='flex';
+  });
+}
+
+function qt_closePageModal(confirmed) {
+  document.getElementById('page-modal').style.display='none';
+  if(qt_modalResolve){
+    qt_modalResolve(confirmed && qt_selectedLayoutPages.size>0 ? [...qt_selectedLayoutPages].sort((a,b)=>a-b) : null);
+    qt_modalResolve=null;
+  }
+}
+
+function qt_toggleChip(el){el.classList.toggle('active');}
+
+function qt_toggleCalcChip(el) {
+  el.classList.toggle('active');
+  const calc = el.dataset.calc;
+  if (el.classList.contains('active')) {
+    if (calc === 'concrete') el.classList.add('active-green');
+    else if (calc === 'formwork') el.classList.add('active-yellow');
+  } else {
+    el.classList.remove('active-green','active-yellow');
+  }
+}
+
+function qt_getCalcOptions() {
+  return [...document.querySelectorAll('#calc-chips .calc-chip.active')].map(c => c.dataset.calc);
+}
+
+async function qt_runRead() {
+  const key=(qt_API_KEY||document.getElementById('api-key').value).trim();
+  if(!key){qt_showError('กรุณาใส่ Gemini API Key ก่อน');return;}
+  if(!qt_selectedFile){qt_showError('กรุณา upload ไฟล์ก่อน');return;}
+  const elements=qt_getActiveChips('element-chips');
+  const note=document.getElementById('extra-note').value.trim();
+  if(!elements.length){qt_showError('เลือก element อย่างน้อย 1 อย่าง');return;}
+
+  qt_hideError(); qt_setStatus('loading');
+  document.getElementById('run-btn').disabled=true;
+
+  try {
+    qt_setProgress('กำลังแตกหน้า PDF…');
+    if(!qt_pdfPageDataUrls.length) qt_pdfPageDataUrls = await qt_extractPdfPages(qt_selectedFile, 1.2);
+    const pages = qt_pdfPageDataUrls;
+    const isPdf = qt_selectedFile.type === 'application/pdf';
+
+    let thumbPages = pages;
+    if(isPdf && pages.length > 1){
+      thumbPages = await qt_extractPdfPages(qt_selectedFile, 0.5);
+    }
+
+    let secPageIdxs = null;
+    let layPageIdxs = [];
+
+    if(isPdf && pages.length > 1) {
+      qt_setProgress('Pass 0/4 — AI ระบุหน้าแบบ…');
+      const thumbParts = thumbPages.map((d,i)=>[
+        {text:`=== Page ${i+1} ===`},
+        {inline_data:{mime_type:'image/jpeg',data:d.split(',')[1]}}
+      ]).flat();
+
+      const p0 = `You are a structural engineer. Identify pages from this structural PDF.
+Return ONLY valid JSON:
+{"section_pages":[20,21],"layout_pages":[16,17],"layout_confident":true}
+- section_pages: pages (1-based) with beam/column CROSS-SECTION details (shows "2-DB12", stirrup, cross-section box drawings)
+- layout_pages: ALL candidate layout plan pages (1-based), most likely first. Layout plans show grid lines A/B/C and 1/2/3 with beam IDs like B1, B2 as lines.
+- layout_confident: true if >80% sure`;
+
+      try {
+        const d0 = await qt_callGeminiParts(key, p0, thumbParts);
+        console.log('[Pass0] result:', JSON.stringify(d0));
+        if(d0?.section_pages?.length) secPageIdxs = d0.section_pages.map(p=>p-1);
+        if(d0?.layout_pages?.length) {
+          layPageIdxs = d0.layout_pages.map(p=>p-1);
+          console.log('[Pass0] layout page candidates (0-based):', layPageIdxs);
+          if(layPageIdxs.length > 1) {
+            qt_setProgress('กรุณาเลือกหน้าผังที่ต้องการ…');
+            const chosen = await qt_showPageModal(layPageIdxs, thumbPages);
+            if(chosen) layPageIdxs = chosen;
+          }
+        }
+      } catch(e){ console.error('[Pass0] error:', e.message); }
+    }
+
+    const secPages = secPageIdxs?.length ? secPageIdxs.map(i=>pages[i]) : pages;
+    const secParts = secPages.map(d=>({inline_data:{mime_type:'image/jpeg',data:d.split(',')[1]}}));
+    const layB64s = layPageIdxs.filter(i=>i<pages.length).map(i=>pages[i].split(',')[1]);
+
+    qt_setProgress('Pass 1/4 — AI อ่าน section detail…');
+    const p1 = `You are a structural engineer reading STRUCTURAL SECTION DETAIL drawings.
+ELEMENT TYPES TO FIND: ${elements.join(', ')}
+${note
+      ? `\nSPECIAL INSTRUCTIONS — STRICTLY FOLLOW, OVERRIDE EVERYTHING:\n${note}\nReturn ONLY the elements explicitly named above. If an element ID is not mentioned, DO NOT include it.`
+      : 'Extract ALL structural elements shown in the drawing.'}
+
+Extract steel reinforcement and dimensions ONLY. Do NOT guess quantity or length.
+Set length_groups:[{"length":0,"qty":1}] as placeholder — will be filled later.
+
+CRITICAL RULES:
+- Elements with prime mark (B1', B2') are SEPARATE elements from B1, B2 — give them distinct IDs.
+- ONLY provide 2 sections if drawing EXPLICITLY shows both SECTION_1-1 and SECTION_2-2 with DIFFERENT bar arrangements, OR has L/4 or L/5 markers in LONG SECTION view. If only 1 cross-section shown → use 1 section, length_ratio:1.0.
+- dia in mm integer. spacing in meters. Detect "DB" or "RB" directly from label text. Default "DB".
+- Set estimated:true for any field not clearly readable. stirrup:null if not shown.
+- Slab (type:"slab"): use width_m (m), length_slab (m), thickness (mm), steel_main, steel_dist. No stirrup.
+
+Return ONLY valid JSON:
+{"drawing_title":"string","warnings":[],"elements":[{"id":"B1","type":"beam","width":150,"height":400,"estimated":false,"length_groups":[{"length":0,"qty":1}],"sections":[{"label":"Section 1-1","length_ratio":1.0,"steel_top":{"count":2,"dia":12,"estimated":false},"steel_bottom":{"count":2,"dia":12,"estimated":false},"steel_extra":[],"stirrup":{"dia":6,"spacing":0.20,"type":"RB","estimated":false}}]}]}`;
+
+    const pass1Data = await qt_callGeminiParts(key, p1, secParts);
+    let els = pass1Data?.elements||[];
+    if(!els.length) throw new Error('ไม่พบ element ในแบบ — ลองอัปโหลดรูปที่ชัดกว่านี้');
+
+    if(note) {
+      const mentionedIds = [...note.matchAll(/\b([A-Za-z]+\d+[A-Za-z']?)\b/g)].map(m=>m[1].toUpperCase());
+      if(mentionedIds.length) {
+        const allowed = new Set(mentionedIds);
+        const filtered = els.filter(e => allowed.has(e.id.toUpperCase()));
+        if(filtered.length) els = filtered;
+      }
+    }
+
+    if(!layB64s.length) {
+      qt_elementsData=els.map(e=>({...e}));
+      qt_renderReview(pass1Data.warnings||[]);
+      qt_setPhase(2); qt_setStatus('review'); qt_setProgress('');
+      document.getElementById('run-btn').disabled=false;
+      return;
+    }
+
+    const layParts = layB64s.map(b=>({inline_data:{mime_type:'image/jpeg',data:b}}));
+
+    qt_setProgress('Pass 2/4 — AI สำรวจ element IDs ในผัง…');
+    const p2 = `You are a structural engineer reading a STRUCTURAL LAYOUT PLAN.
+List ALL structural element IDs visible on this page. Include prime variants separately (B1 and B1' are different).
+Return ONLY valid JSON: {"ids":["B1","B1'","B2","B3","S1","C1"]}`;
+
+    let layoutIds = els.map(e=>e.id);
+    try {
+      const allIds = new Set();
+      for(const part of layParts){
+        const d2 = await qt_callGeminiParts(key, p2, [part]);
+        if(d2?.ids?.length) d2.ids.forEach(id=>allIds.add(id));
+        await new Promise(r=>setTimeout(r,400));
+      }
+      if(allIds.size) layoutIds=[...allIds];
+    } catch(e){}
+
+    const pass1Ids = new Set(els.map(e=>e.id));
+    const idsToCount = [...pass1Ids];
+    const countMap = {};
+
+    for(let ci=0; ci<idsToCount.length; ci++){
+      const id = idsToCount[ci];
+      qt_setProgress(`Pass 3/4 — นับ ${id} (${ci+1}/${idsToCount.length})…`);
+
+      const acc = {};
+      for(let pi=0; pi<layParts.length; pi++){
+        const floorLabel = layParts.length>1 ? `Floor ${pi+1}` : 'Layout Plan';
+        try{
+          const d3 = await qt_callGeminiParts(key, `You are a structural engineer reading a STRUCTURAL LAYOUT PLAN (${floorLabel}).
+Count ALL instances of element "${id}" on this page only.
+IMPORTANT: "${id}" is different from B1', B2, B3 etc — count ONLY exact match "${id}".
+
+Step 1: Find every location where "${id}" appears on the plan.
+Step 2: For each instance, read its span length from the nearest dimension line (mm or m on the drawing).
+Step 3: Group by span length and count.
+
+CRITICAL: Report ALL different span lengths found. Do NOT skip shorter spans or report only the most common one.
+Read dimension lines carefully — spans like 3.0m, 2.5m, 2.2m may all exist for the same beam ID.
+
+Return ONLY valid JSON: {"length_groups":[{"length":3.0,"qty":6},{"length":2.5,"qty":2},{"length":2.2,"qty":1}]}
+- length: in meters (convert from mm if needed, e.g. 3000mm = 3.0m)
+- qty: count for that exact span`, [layParts[pi]]);
+          console.log(`[Pass3] "${id}" ${floorLabel}:`, JSON.stringify(d3));
+          if(d3?.length_groups?.length){
+            d3.length_groups.forEach(g=>{
+              if(g.length>0 && g.qty>0){
+                const lk = g.length.toFixed(2);
+                acc[lk] = (acc[lk]||0) + g.qty;
+              }
+            });
+          }
+        } catch(e){ console.error(`[Pass3] "${id}" ${floorLabel} error:`, e.message); }
+        await new Promise(r=>setTimeout(r,500));
+      }
+
+      const merged = Object.entries(acc).map(([l,q])=>({length:parseFloat(l),qty:q}));
+      if(merged.length){
+        countMap[id] = merged;
+        console.log(`[Pass3] "${id}" total:`, JSON.stringify(merged));
+      } else {
+        console.warn(`[Pass3] "${id}" — no count`);
+      }
+    }
+
+    qt_setProgress('Pass 4/4 — Merge ผลลัพธ์…');
+    els = els.map(el=>{
+      if(countMap[el.id] && countMap[el.id][0]?.length>0){
+        return {...el, length_groups: countMap[el.id]};
+      }
+      const base = el.id.replace(/['^]/g,'');
+      const fuzzy = Object.keys(countMap).find(k=>k===base||k===el.id);
+      if(fuzzy && countMap[fuzzy][0]?.length>0){
+        return {...el, length_groups: countMap[fuzzy], estimated:true};
+      }
+      return {...el, estimated:true};
+    });
+
+    const warnings = [...(pass1Data.warnings||[])];
+    const missingInSection = layoutIds
+      .map(id => id.trim())
+      .filter(id => {
+        if(!countMap[id]) return false;
+        if(pass1Ids.has(id)) return false;
+        const prefixMap = {beam:['B'], column:['C'], slab:['S'], footing:['F','FT']};
+        return elements.some(type => {
+          const prefixes = prefixMap[type]||[];
+          return prefixes.some(pfx => id.toUpperCase().startsWith(pfx));
+        });
+      });
+    if(missingInSection.length){
+      warnings.push(`พบคานในผังแต่ไม่มี section detail: ${missingInSection.join(', ')} — กรุณาเพิ่มข้อมูลเอง`);
+    }
+
+    qt_elementsData = els.map(e=>({...e}));
+    qt_renderReview(warnings);
+    qt_setPhase(2); qt_setStatus('review'); qt_setProgress('');
+    document.getElementById('run-btn').disabled=false;
+
+  } catch(err){
+    qt_showError(err.message||'เกิดข้อผิดพลาด');
+    qt_setProgress('');
+    document.getElementById('run-btn').disabled=false;
+  }
+}
+
+async function qt_callGeminiParts(key, prompt, parts, maxRetry=5) {
+  let lastErr;
+  let attempt=0;
+  while(attempt < maxRetry){
+    attempt++;
+    try{
+      const res=await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,
+        {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+          contents:[{parts:[{text:prompt},...parts]}],
+          generationConfig:{temperature:0.05,maxOutputTokens:8192}
+        })}
+      );
+      const data=await res.json();
+
+      if(res.status===429){
+        const msg=data?.error?.message||'';
+        const waitMatch=msg.match(/retry in ([\d.]+)s/i);
+        const waitSec=waitMatch?Math.ceil(parseFloat(waitMatch[1]))+2:20;
+        qt_setProgress(`⏳ Quota หมด — รอ ${waitSec}s แล้ว retry (${attempt}/${maxRetry})…`);
+        await new Promise(r=>setTimeout(r,waitSec*1000));
+        continue;
+      }
+
+      if(res.status===503){
+        const waitSec=Math.min(10*attempt,60);
+        qt_setProgress(`⚠️ Server busy — รอ ${waitSec}s แล้ว retry (${attempt}/${maxRetry})…`);
+        await new Promise(r=>setTimeout(r,waitSec*1000));
+        continue;
+      }
+
+      if(!res.ok) throw new Error(data?.error?.message||`HTTP ${res.status}`);
+      let raw=data?.candidates?.[0]?.content?.parts?.[0]?.text||'';
+      raw=raw.replace(/```json/gi,'').replace(/```/g,'').trim();
+      const s=raw.indexOf('{'),e=raw.lastIndexOf('}');
+      if(s!==-1&&e>s) raw=raw.slice(s,e+1);
+      try{ return JSON.parse(raw); }
+      catch(_){
+        const m=raw.match(/\{[\s\S]*\}/);
+        if(m){ try{ return JSON.parse(m[0]); }catch(__){} }
+        if(attempt<maxRetry){ await new Promise(r=>setTimeout(r,800)); continue; }
+        throw new Error('AI ตอบกลับไม่ถูก format');
+      }
+    } catch(err){
+      lastErr=err;
+      if(err.message.includes('API key')||err.message.includes('invalid')) break;
+      if(attempt>=maxRetry) break;
+      await new Promise(r=>setTimeout(r,1000));
+    }
+  }
+  throw lastErr||new Error('เกิดข้อผิดพลาด');
+}
+
+async function qt_callGemini(key,prompt,base64,mime,maxRetry=3){
+  return qt_callGeminiParts(key,prompt,[{inline_data:{mime_type:mime,data:base64}}],maxRetry);
+}
+function qt_getMime(f){
+  if(f.type==='application/pdf') return 'application/pdf';
+  if(f.type==='image/png') return 'image/png';
+  if(f.type==='image/webp') return 'image/webp';
+  return 'image/jpeg';
+}
+
+function qt_renderReview(warnings=[]) {
+  const container=document.getElementById('el-cards-container');
+  container.innerHTML='';
+
+  if(warnings.length){
+    container.innerHTML+=`<div class="warn-box">⚠️ ${warnings.join(' · ')}</div>`;
+  }
+
+  qt_elementsData.forEach((el,i)=>container.innerHTML+=qt_buildElCard(el,i));
+}
+
+function qt_buildElCard(el,i) {
+  const est=v=>v?'estimated':'';
+  const estBadge=v=>v?'<span class="estimated-badge">EST</span>':'';
+  const isSlab = (el.type||'beam')==='slab';
+
+  const header = `
+  <div class="el-card" id="elcard-${i}">
+    <div class="el-card-header">
+      <div style="display:flex;align-items:center;gap:10px">
+        <input class="el-id-input" type="text" value="${el.id}" data-el="${i}" data-field="id" oninput="qt_updateField(this)">
+        ${estBadge(el.estimated)}
+        <span class="el-type-badge">${el.type||'beam'}</span>
+      </div>
+      <button class="el-delete" onclick="qt_deleteElement(${i})" title="ลบ element นี้">✕</button>
+    </div>
+    <div class="el-body">`;
+
+  const footer = `</div></div>`;
+
+  if (isSlab) {
+    return header + `
+      <div class="field-grid">
+        <div class="field-group">
+          <div class="field-label">Width</div>
+          <input class="field-input ${est(el.estimated)}" type="number" min="0" step="0.01" value="${el.width_m||el.width/1000||4}" data-el="${i}" data-field="slab_width_m" oninput="qt_updateField(this)">
+          <div class="field-unit">m</div>
+        </div>
+        <div class="field-group">
+          <div class="field-label">Length</div>
+          <input class="field-input ${est(el.estimated)}" type="number" min="0" step="0.01" value="${el.length_slab||0}" data-el="${i}" data-field="length_slab" oninput="qt_updateField(this)">
+          <div class="field-unit">m</div>
+        </div>
+        <div class="field-group">
+          <div class="field-label">Thickness</div>
+          <input class="field-input ${est(el.estimated)}" type="number" min="1" value="${el.thickness||120}" data-el="${i}" data-field="thickness" oninput="qt_updateField(this)">
+          <div class="field-unit">mm</div>
+        </div>
+      </div>
+      <div class="steel-section">
+        <div class="steel-section-title">Reinforcement</div>
+        <div class="steel-row">
+          <div class="steel-pos">Main Bar ${estBadge(el.steel_main?.estimated)}</div>
+          <div style="display:flex;align-items:center;gap:6px;flex:1;flex-wrap:wrap">
+            <span style="font-size:11px;color:var(--muted)">${el.steel_main?.type||'DB'}</span>
+            <input class="steel-input ${est(el.steel_main?.estimated)}" type="number" min="6" max="32"
+              value="${el.steel_main?.dia??12}" data-el="${i}" data-field="slab_main_dia" oninput="qt_updateField(this)" style="width:70px">
+            <span style="font-size:11px;color:var(--muted)">@ every</span>
+            <input class="steel-input ${est(el.steel_main?.estimated)}" type="number" min="0.05" max="1" step="0.01"
+              value="${el.steel_main?.spacing??0.20}" data-el="${i}" data-field="slab_main_spacing" oninput="qt_updateField(this)" style="width:70px">
+            <span style="font-size:11px;color:var(--muted)">m</span>
+          </div>
+        </div>
+        <div class="steel-row">
+          <div class="steel-pos">Dist Bar ${estBadge(el.steel_dist?.estimated)}</div>
+          <div style="display:flex;align-items:center;gap:6px;flex:1;flex-wrap:wrap">
+            <span style="font-size:11px;color:var(--muted)">${el.steel_dist?.type||'DB'}</span>
+            <input class="steel-input ${est(el.steel_dist?.estimated)}" type="number" min="6" max="32"
+              value="${el.steel_dist?.dia??12}" data-el="${i}" data-field="slab_dist_dia" oninput="qt_updateField(this)" style="width:70px">
+            <span style="font-size:11px;color:var(--muted)">@ every</span>
+            <input class="steel-input ${est(el.steel_dist?.estimated)}" type="number" min="0.05" max="1" step="0.01"
+              value="${el.steel_dist?.spacing??0.20}" data-el="${i}" data-field="slab_dist_spacing" oninput="qt_updateField(this)" style="width:70px">
+            <span style="font-size:11px;color:var(--muted)">m</span>
+          </div>
+        </div>
+      </div>` + footer;
+  }
+
+  const groups = el.length_groups || (el.length ? [{ length: el.length, qty: 1 }] : [{ length: 0, qty: 1 }]);
+  const sections = el.sections || [{
+    label: 'Section 1-1',
+    length_ratio: 1.0,
+    steel_top: el.steel_top || { count: 2, dia: 16 },
+    steel_bottom: el.steel_bottom || { count: 2, dia: 16 },
+    steel_extra: el.steel_extra || [],
+    stirrup: el.stirrup || null
+  }];
+
+  const groupRows = groups.map((g,gi) => `
+    <div class="steel-row" style="align-items:center;gap:8px" id="lg-${i}-${gi}">
+      <div class="steel-pos" style="min-width:60px">ช่วงที่ ${gi+1}</div>
+      <span style="font-size:11px;color:var(--muted)">L =</span>
+      <input class="steel-input" type="number" min="0" step="0.01" value="${g.length||0}"
+        data-el="${i}" data-field="lg_len_${gi}" oninput="qt_updateField(this)" style="width:72px">
+      <span style="font-size:11px;color:var(--muted)">m ×</span>
+      <input class="steel-input" type="number" min="1" step="1" value="${g.qty||1}"
+        data-el="${i}" data-field="lg_qty_${gi}" oninput="qt_updateField(this)" style="width:55px">
+      <span style="font-size:11px;color:var(--muted)">ตัว</span>
+      ${groups.length>1?`<button onclick="qt_removeLengthGroup(${i},${gi})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0 4px">✕</button>`:''}
+    </div>`).join('');
+
+  const sectionHtml = sections.map((sec, si) => {
+    let extraH='';
+    (sec.steel_extra||[]).forEach((s,j)=>{
+      extraH+=`<div class="steel-row">
+        <div class="steel-pos" style="font-size:10px">Extra ${j+1}</div>
+        <input class="steel-input" type="number" min="1" max="20" value="${s.count||2}"
+          data-el="${i}" data-field="sec_${si}_extra_count_${j}" style="width:60px">
+        <div class="steel-between">× DB</div>
+        <input class="steel-input" type="number" min="6" max="40" value="${s.dia||16}"
+          data-el="${i}" data-field="sec_${si}_extra_dia_${j}" style="width:60px">
+      </div>`;
+    });
+    return `
+    <div class="section-block" id="sec-${i}-${si}">
+      <div class="section-header">
+        <span class="section-label">${sec.label||`Section ${si+1}`}</span>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:10px;color:var(--muted)">สัดส่วน</span>
+          <input class="steel-input" type="number" min="0.01" max="1" step="0.01" value="${+(sec.length_ratio||1).toFixed(2)}"
+            data-el="${i}" data-field="sec_${si}_ratio" oninput="qt_updateField(this)" style="width:60px">
+          <span style="font-size:10px;color:var(--muted)">× L</span>
+        </div>
+      </div>
+      <div class="steel-row">
+        <div class="steel-pos">Top ${estBadge(sec.steel_top?.estimated)}</div>
+        <input class="steel-input ${est(sec.steel_top?.estimated)}" type="number" min="0" max="20"
+          value="${sec.steel_top?.count??2}" data-el="${i}" data-field="sec_${si}_top_count" oninput="qt_updateField(this)" style="width:65px">
+        <div class="steel-between">× DB</div>
+        <input class="steel-input ${est(sec.steel_top?.estimated)}" type="number" min="6" max="40"
+          value="${sec.steel_top?.dia??16}" data-el="${i}" data-field="sec_${si}_top_dia" oninput="qt_updateField(this)" style="width:65px">
+      </div>
+      <div class="steel-row">
+        <div class="steel-pos">Bottom ${estBadge(sec.steel_bottom?.estimated)}</div>
+        <input class="steel-input ${est(sec.steel_bottom?.estimated)}" type="number" min="0" max="20"
+          value="${sec.steel_bottom?.count??2}" data-el="${i}" data-field="sec_${si}_bot_count" oninput="qt_updateField(this)" style="width:65px">
+        <div class="steel-between">× DB</div>
+        <input class="steel-input ${est(sec.steel_bottom?.estimated)}" type="number" min="6" max="40"
+          value="${sec.steel_bottom?.dia??16}" data-el="${i}" data-field="sec_${si}_bot_dia" oninput="qt_updateField(this)" style="width:65px">
+      </div>
+      ${extraH}
+      <div class="steel-row" style="margin-top:4px">
+        <div class="steel-pos">Stirrup ${sec.stirrup?estBadge(sec.stirrup.estimated):''}</div>
+        <div style="display:flex;align-items:center;gap:6px;flex:1;flex-wrap:wrap">
+          <div class="bar-type-toggle">
+            <button class="bar-type-btn ${(sec.stirrup?.type||'DB')==='DB'?'active-db':''}"
+              onclick="qt_setSecStirrupType(${i},${si},'DB',this)">DB</button>
+            <button class="bar-type-btn ${(sec.stirrup?.type||'DB')==='RB'?'active-rb':''}"
+              onclick="qt_setSecStirrupType(${i},${si},'RB',this)">RB</button>
+          </div>
+          <input class="steel-input ${est(sec.stirrup?.estimated)}" type="number" min="6" max="25"
+            value="${sec.stirrup?.dia??6}" data-el="${i}" data-field="sec_${si}_stir_dia" oninput="qt_updateField(this)" style="width:60px">
+          <span style="font-size:11px;color:var(--muted)">@ every</span>
+          <input class="steel-input ${est(sec.stirrup?.estimated)}" type="number" min="0.05" max="1" step="0.01"
+            value="${sec.stirrup?.spacing??0.15}" data-el="${i}" data-field="sec_${si}_stir_sp" oninput="qt_updateField(this)" style="width:65px">
+          <span style="font-size:11px;color:var(--muted)">m</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  return header + `
+      <div class="field-grid">
+        <div class="field-group">
+          <div class="field-label">Width</div>
+          <input class="field-input ${est(el.estimated)}" type="number" min="1" value="${el.width||250}" data-el="${i}" data-field="width" oninput="qt_updateField(this)">
+          <div class="field-unit">mm</div>
+        </div>
+        <div class="field-group">
+          <div class="field-label">Height / Depth</div>
+          <input class="field-input ${est(el.estimated)}" type="number" min="1" value="${el.height||500}" data-el="${i}" data-field="height" oninput="qt_updateField(this)">
+          <div class="field-unit">mm</div>
+        </div>
+      </div>
+
+      <div class="steel-section">
+        <div class="steel-section-title" style="display:flex;justify-content:space-between;align-items:center">
+          <span>ช่วงความยาว (Length Groups)</span>
+          <button class="add-el-btn" style="padding:4px 10px;font-size:11px" onclick="qt_addLengthGroup(${i})">+ เพิ่มช่วง</button>
+        </div>
+        <div id="lg-container-${i}">${groupRows}</div>
+      </div>
+
+      <div class="steel-section" style="margin-top:12px">
+        <div class="steel-section-title" style="display:flex;justify-content:space-between;align-items:center">
+          <span>Sections (หน้าตัดเหล็ก)</span>
+          <button class="add-el-btn" style="padding:4px 10px;font-size:11px" onclick="qt_addSection(${i})">+ เพิ่ม Section</button>
+        </div>
+        <div id="sec-container-${i}">${sectionHtml}</div>
+      </div>` + footer;
+}
+
+function qt_updateField(input) {
+  const i=+input.dataset.el, field=input.dataset.field, val=input.value;
+  const el=qt_elementsData[i];
+  if(!el) return;
+  if(field==='id')     { el.id=val; return; }
+  if(field==='width')  { el.width=+val; return; }
+  if(field==='height') { el.height=+val; return; }
+  if(field==='length') { el.length=+val; return; }
+  if(field==='steel_top_count')    { el.steel_top=el.steel_top||{}; el.steel_top.count=+val; return; }
+  if(field==='steel_top_dia')      { el.steel_top=el.steel_top||{}; el.steel_top.dia=+val; return; }
+  if(field==='steel_bottom_count') { el.steel_bottom=el.steel_bottom||{}; el.steel_bottom.count=+val; return; }
+  if(field==='steel_bottom_dia')   { el.steel_bottom=el.steel_bottom||{}; el.steel_bottom.dia=+val; return; }
+  if(field==='stirrup_dia')        { el.stirrup=el.stirrup||{}; el.stirrup.dia=+val; return; }
+  if(field==='stirrup_spacing')    { el.stirrup=el.stirrup||{}; el.stirrup.spacing=+val; return; }
+  if(field==='stirrup_type')       { el.stirrup=el.stirrup||{}; el.stirrup.type=val; return; }
+  if(field==='length_slab')        { el.length_slab=+val; return; }
+  if(field==='slab_width_m')       { el.width_m=+val; return; }
+  if(field==='thickness')          { el.thickness=+val; return; }
+  if(field==='slab_main_dia')      { el.steel_main=el.steel_main||{}; el.steel_main.dia=+val; return; }
+  if(field==='slab_main_spacing')  { el.steel_main=el.steel_main||{}; el.steel_main.spacing=+val; return; }
+  if(field==='slab_dist_dia')      { el.steel_dist=el.steel_dist||{}; el.steel_dist.dia=+val; return; }
+  if(field==='slab_dist_spacing')  { el.steel_dist=el.steel_dist||{}; el.steel_dist.spacing=+val; return; }
+  const extraCount=field.match(/^extra_count_(\d+)$/);
+  const extraDia  =field.match(/^extra_dia_(\d+)$/);
+  if(extraCount) { el.steel_extra[+extraCount[1]].count=+val; }
+  if(extraDia)   { el.steel_extra[+extraDia[1]].dia=+val; }
+  const lgLen=field.match(/^lg_len_(\d+)$/);
+  if(lgLen){ const gi=+lgLen[1]; el.length_groups=el.length_groups||[]; el.length_groups[gi]=el.length_groups[gi]||{}; el.length_groups[gi].length=+val; return; }
+  const lgQty=field.match(/^lg_qty_(\d+)$/);
+  if(lgQty){ const gi=+lgQty[1]; el.length_groups=el.length_groups||[]; el.length_groups[gi]=el.length_groups[gi]||{}; el.length_groups[gi].qty=+val; return; }
+  const secM=field.match(/^sec_(\d+)_(.+)$/);
+  if(secM){
+    const si=+secM[1], sf=secM[2];
+    el.sections=el.sections||[]; el.sections[si]=el.sections[si]||{};
+    const sec=el.sections[si];
+    if(sf==='ratio')     { sec.length_ratio=+val; return; }
+    if(sf==='top_count') { sec.steel_top=sec.steel_top||{}; sec.steel_top.count=+val; return; }
+    if(sf==='top_dia')   { sec.steel_top=sec.steel_top||{}; sec.steel_top.dia=+val; return; }
+    if(sf==='bot_count') { sec.steel_bottom=sec.steel_bottom||{}; sec.steel_bottom.count=+val; return; }
+    if(sf==='bot_dia')   { sec.steel_bottom=sec.steel_bottom||{}; sec.steel_bottom.dia=+val; return; }
+    if(sf==='stir_dia')  { sec.stirrup=sec.stirrup||{}; sec.stirrup.dia=+val; return; }
+    if(sf==='stir_sp')   { sec.stirrup=sec.stirrup||{}; sec.stirrup.spacing=+val; return; }
+  }
+}
+
+function qt_setStirrupType(i, type, btn) {
+  const el = qt_elementsData[i];
+  if (!el) return;
+  el.stirrup = el.stirrup || {};
+  el.stirrup.type = type;
+  const toggle = btn.closest('.bar-type-toggle');
+  toggle.querySelectorAll('.bar-type-btn').forEach(b => b.classList.remove('active-db','active-rb'));
+  btn.classList.add(type === 'DB' ? 'active-db' : 'active-rb');
+}
+
+function qt_setSecStirrupType(i, si, type, btn) {
+  const el = qt_elementsData[i];
+  if (!el) return;
+  el.sections = el.sections || [];
+  el.sections[si] = el.sections[si] || {};
+  el.sections[si].stirrup = el.sections[si].stirrup || {};
+  el.sections[si].stirrup.type = type;
+  const toggle = btn.closest('.bar-type-toggle');
+  toggle.querySelectorAll('.bar-type-btn').forEach(b => b.classList.remove('active-db','active-rb'));
+  btn.classList.add(type === 'DB' ? 'active-db' : 'active-rb');
+}
+
+function qt_addLengthGroup(i) {
+  const el = qt_elementsData[i];
+  if (!el) return;
+  el.length_groups = el.length_groups || [];
+  el.length_groups.push({ length: 0, qty: 1 });
+  qt_renderReview();
+}
+
+function qt_removeLengthGroup(i, gi) {
+  const el = qt_elementsData[i];
+  if (!el || !el.length_groups) return;
+  el.length_groups.splice(gi, 1);
+  qt_renderReview();
+}
+
+function qt_addSection(i) {
+  const el = qt_elementsData[i];
+  if (!el) return;
+  el.sections = el.sections || [];
+  const si = el.sections.length;
+  el.sections.push({
+    label: `Section ${si+1}`,
+    length_ratio: 0.5,
+    steel_top: { count: 2, dia: 16, estimated: true },
+    steel_bottom: { count: 2, dia: 16, estimated: true },
+    steel_extra: [],
+    stirrup: { dia: 6, spacing: 0.15, type: 'DB', estimated: true }
+  });
+  qt_renderReview();
+}
+
+function qt_deleteElement(i) {
+  qt_elementsData.splice(i,1);
+  qt_renderReview();
+}
+
+function qt_addElement() {
+  qt_elementsData.push({
+    id:`B${qt_elementsData.length+1}`, type:'beam',
+    width:250, height:500, estimated:true,
+    length_groups:[{length:5.0, qty:1}],
+    sections:[{label:'Section 1', length_ratio:1.0, steel_top:{count:2,dia:16,estimated:true}, steel_bottom:{count:2,dia:16,estimated:true}, steel_extra:[], stirrup:{dia:6,spacing:0.15,type:'DB',estimated:true}}]
+  });
+  qt_renderReview();
+  setTimeout(()=>{
+    const cards=document.querySelectorAll('.el-card');
+    cards[cards.length-1]?.scrollIntoView({behavior:'smooth',block:'center'});
+  },100);
+}
+
+function qt_calcElement(el) {
+  const isSlab = (el.type||'beam') === 'slab';
+
+  if (isSlab) {
+    const W  = el.width_m || el.width/1000;
+    const L  = el.length_slab||0;
+    const T  = (el.thickness||120)/1000;
+    const concrete = +(W*L*T).toFixed(4);
+    const formwork = +(W*L).toFixed(4);
+    const rows=[];
+    let totalSteel=0;
+
+    const addSlabBar=(pos,barObj,spanLen)=>{
+      if(!barObj?.dia||!barObj?.spacing||!spanLen) return;
+      const {dia,spacing,type='DB'}=barObj;
+      const qty=Math.ceil(spanLen/spacing)+1;
+      const uw=qt_steelUW(dia), kg=+(qty*spanLen*uw).toFixed(2);
+      totalSteel+=kg;
+      rows.push({pos,count:qty,dia,barType:type,len:+spanLen.toFixed(2),uw,kg});
+    };
+    addSlabBar('Main Bar', el.steel_main, L);
+    addSlabBar('Dist Bar', el.steel_dist, W);
+
+    const byDia={};
+    rows.forEach(r=>{ const k=`${r.barType}${r.dia}`; byDia[k]=(byDia[k]||0)+r.kg; });
+    Object.keys(byDia).forEach(k=>{ byDia[k]=+byDia[k].toFixed(2); });
+    return {concrete,formwork,steel:+totalSteel.toFixed(2),rows,byDia};
+  }
+
+  const W=el.width/1000, H=el.height/1000, hook=0.3;
+  const groups = el.length_groups?.length ? el.length_groups : [{ length: el.length||0, qty: 1 }];
+  const sections = el.sections?.length ? el.sections : [{label:'Section 1', length_ratio:1.0, steel_top: el.steel_top, steel_bottom: el.steel_bottom, steel_extra: el.steel_extra||[], stirrup: el.stirrup}];
+
+  const rows=[];
+  let totalSteel=0, totalConcrete=0, totalFormwork=0;
+
+  groups.forEach(g => {
+    const L = g.length||0;
+    const qty = g.qty||1;
+    totalConcrete += W*H*L*qty;
+    totalFormwork += (2*H+W)*L*qty;
+
+    sections.forEach(sec => {
+      const sL = +(L * (sec.length_ratio||1)).toFixed(3);
+      const addBar=(pos,count,dia,barType='DB')=>{
+        if(!count||!dia||!sL) return;
+        const len=+(sL+2*hook).toFixed(2), uw=qt_steelUW(dia);
+        const kg=+(count*len*uw*qty).toFixed(2);
+        totalSteel+=kg;
+        rows.push({pos:`${sec.label||'Sec'} – ${pos}`,count:count*qty,dia,barType,len,uw,kg});
+      };
+      if(sec.steel_top?.count)    addBar('Top',    sec.steel_top.count,    sec.steel_top.dia);
+      if(sec.steel_bottom?.count) addBar('Bottom', sec.steel_bottom.count, sec.steel_bottom.dia);
+      (sec.steel_extra||[]).forEach((s,j)=>{ if(s.count&&s.dia) addBar(`Extra ${j+1}`,s.count,s.dia); });
+
+      if(sec.stirrup?.dia&&sec.stirrup?.spacing&&sL>0){
+        const {dia,spacing,type='DB'}=sec.stirrup;
+        const cover=0.03, perim=2*((W-2*cover)+(H-2*cover))+8*(dia/1000);
+        const qtyStir=(Math.ceil(sL/spacing)+1)*qty;
+        const kg=+(qtyStir*perim*qt_steelUW(dia)).toFixed(2);
+        totalSteel+=kg;
+        rows.push({pos:`${sec.label||'Sec'} – Stirrup`,count:qtyStir,dia,barType:type,len:+perim.toFixed(3),uw:qt_steelUW(dia),kg});
+      }
+    });
+  });
+
+  const concrete=+totalConcrete.toFixed(4);
+  const formwork=+totalFormwork.toFixed(4);
+  const byDia={};
+  rows.forEach(r=>{ const key=`${r.barType||'DB'}${r.dia}`; byDia[key]=(byDia[key]||0)+r.kg; });
+  Object.keys(byDia).forEach(k=>{ byDia[k]=+byDia[k].toFixed(2); });
+  return {concrete,formwork,steel:+totalSteel.toFixed(2),rows,byDia};
+}
+
+function qt_runCalculate() {
+  if(!qt_elementsData.length){alert('ไม่มี element ให้คำนวณ');return;}
+
+  const opts = qt_getCalcOptions();
+  if(!opts.length){alert('กรุณาเลือกรายการคำนวณอย่างน้อย 1 อย่าง');return;}
+
+  const showConcrete  = opts.includes('concrete');
+  const showFormwork  = opts.includes('formwork');
+  const showSteel     = opts.includes('steel') || opts.includes('stirrup');
+  const showBarSched  = opts.includes('bar_schedule');
+  const showStirrUp   = opts.includes('stirrup');
+
+  let totC=0,totS=0,totF=0;
+  const totByDia={};
+  qt_elementsData.forEach(el=>{
+    const c=qt_calcElement(el);
+    totC+=c.concrete; totS+=c.steel; totF+=c.formwork;
+    Object.entries(c.byDia).forEach(([key,kg])=>{ totByDia[key]=(totByDia[key]||0)+kg; });
+  });
+  Object.keys(totByDia).forEach(k=>{ totByDia[k]=+totByDia[k].toFixed(2); });
+
+  const cellConcrete = document.querySelector('.summary-grid .summary-cell:nth-child(1)');
+  const cellSteel    = document.querySelector('.summary-grid .summary-cell:nth-child(2)');
+  const cellFormwork = document.querySelector('.summary-grid .summary-cell:nth-child(3)');
+  cellConcrete.style.display = showConcrete ? '' : 'none';
+  cellSteel.style.display    = showSteel    ? '' : 'none';
+  cellFormwork.style.display = showFormwork ? '' : 'none';
+
+  if(showConcrete) document.getElementById('tot-concrete').textContent=totC.toFixed(3);
+  if(showSteel){
+    document.getElementById('tot-steel').textContent=totS.toFixed(1);
+    const diaRows=Object.keys(totByDia).sort((a,b)=>+a.replace(/\D/g,'')-+b.replace(/\D/g,''))
+      .map(d=>`<div class="dia-row"><span class="dia-tag">${d}</span><span class="dia-kg">${totByDia[d]} kg</span></div>`).join('');
+    document.getElementById('steel-dia-breakdown').innerHTML=diaRows;
+    document.getElementById('steel-dia-breakdown').style.display='';
+  } else {
+    document.getElementById('steel-dia-breakdown').style.display='none';
+  }
+  if(showFormwork) document.getElementById('tot-formwork').textContent=totF.toFixed(2);
+
+  const container=document.getElementById('beam-cards');
+  container.innerHTML='';
+  qt_elementsData.forEach((el,i)=>{
+    const c=qt_calcElement(el);
+    let filteredRows = c.rows;
+    if (!showStirrUp) filteredRows = filteredRows.filter(r => r.pos !== 'Stirrup');
+    if (!showSteel)   filteredRows = [];
+
+    const rows = filteredRows.map(r=>`<tr><td>${r.pos}</td><td>${r.count} × ${r.barType||'DB'}${r.dia}</td><td>${r.len} m</td><td>${r.uw} kg/m</td><td><b>${r.kg} kg</b></td></tr>`).join('');
+
+    const diaPills = showSteel
+      ? Object.keys(c.byDia).sort((a,b)=>+a.replace(/\D/g,'')-+b.replace(/\D/g,''))
+          .map(d=>`<div class="qty-pill qty-pill-dia"><div class="qp-val">${c.byDia[d]}</div><div class="qp-unit">kg</div><div class="qp-label">${d}</div></div>`)
+          .join('')
+      : '';
+
+    const qtyPills = [
+      showConcrete ? `<div class="qty-pill"><div class="qp-val">${c.concrete}</div><div class="qp-unit">m³</div><div class="qp-label">Concrete</div></div>` : '',
+      showFormwork ? `<div class="qty-pill"><div class="qp-val">${c.formwork}</div><div class="qp-unit">m²</div><div class="qp-label">Formwork</div></div>` : '',
+      diaPills,
+    ].join('');
+
+    const tableSection = showBarSched && rows
+      ? `<table class="steel-table"><thead><tr><th>Position</th><th>Bar</th><th>Length/Perim</th><th>Unit Wt</th><th>Weight</th></tr></thead><tbody>${rows}</tbody></table>`
+      : (showBarSched ? '<div style="color:var(--muted);font-size:12px">No steel data</div>' : '');
+
+    container.innerHTML+=`
+    <div class="beam-card open" id="rc-${i}">
+      <div class="beam-header" onclick="document.getElementById('rc-${i}').classList.toggle('open')">
+        <div class="beam-id-block">
+          <span class="beam-id">${el.id}</span>
+          <span class="beam-size">${el.width}×${el.height}mm · L=${el.length}m</span>
+        </div>
+        <span class="beam-chevron">▼</span>
+      </div>
+      <div class="beam-body">
+        <div class="qty-row">${qtyPills}</div>
+        ${tableSection}
+      </div>
+    </div>`;
+  });
+
+  qt_setPhase(3);
+  qt_setStatus('done');
+  document.getElementById('result-section').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function qt_copyResult(){
+  let txt='QUANTITY TAKEOFF SUMMARY\n'+'='.repeat(50)+'\n';
+  qt_elementsData.forEach(el=>{
+    const c=qt_calcElement(el);
+    txt+=`\n${el.id} (${el.width}x${el.height}mm, L=${el.length}m)\n`;
+    txt+=`  Concrete : ${c.concrete} m³\n  Steel    : ${c.steel} kg\n  Formwork : ${c.formwork} m²\n`;
+    c.rows.forEach(r=>txt+=`    ${r.pos}: ${r.count}×DB${r.dia}, L=${r.len}m → ${r.kg} kg\n`);
+  });
+  navigator.clipboard.writeText(txt);
+  const btn=document.getElementById('copy-btn');
+  btn.textContent='✓ Copied!';btn.classList.add('copied');
+  setTimeout(()=>{btn.textContent='Copy Summary';btn.classList.remove('copied');},2000);
+}
+
+qt_setPhase(1);
+  </script>
+</body>
+</html>
