@@ -17,6 +17,8 @@ export function qt_setFile(f) {
   globalThis.qt_selectedFile = f;
   globalThis.qt_pdfPageDataUrls = [];
   globalThis.qt_selectedLayoutPage = null;
+  globalThis.qt_selectedLayoutPages = new Set();
+  globalThis.qt_modalResolve = null;
   const dz = document.getElementById('drop-zone');
   dz.classList.add('has-file');
   document.getElementById('dz-icon').textContent = '📄';
@@ -24,6 +26,9 @@ export function qt_setFile(f) {
 }
 
 export async function qt_extractPdfPages(file, scale = 1.2) {
+  if (typeof pdfjsLib === 'undefined') {
+    throw new Error('pdfjsLib not loaded — check script load order');
+  }
   if (file.type !== 'application/pdf') {
     const b64 = await qt_fileToBase64(file);
     return [`data:${file.type};base64,${b64}`];

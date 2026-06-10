@@ -3,10 +3,10 @@
  * upload, Gemini, parser, and UI modules together for the page.
  */
 
-import { qt_onDragOver, qt_onDragLeave, qt_onDrop, qt_onFileChange, qt_setFile, qt_extractPdfPages, qt_showPageModal } from './drawing-upload.js';
+import { qt_onDragOver, qt_onDragLeave, qt_onDrop, qt_onFileChange, qt_setFile, qt_extractPdfPages, qt_showPageModal, qt_closePageModal } from './drawing-upload.js';
 import { qt_callGeminiParts } from './drawing-gemini.js';
 import { qt_normalizeGeminiResponse } from './drawing-parser.js';
-import { qt_renderReview, qt_setStatus, qt_setProgress, qt_showError, qt_hideError, qt_setPhase } from './drawing-ui.js';
+import { qt_renderReview, qt_setStatus, qt_setProgress, qt_showError, qt_hideError, qt_setPhase, qt_goBack, qt_goReview, qt_getActiveChips, qt_toggleChip, qt_toggleCalcChip, qt_getCalcOptions, qt_updateField, qt_setStirrupType, qt_setSecStirrupType, qt_addLengthGroup, qt_removeLengthGroup, qt_addSection, qt_deleteElement, qt_addElement } from './drawing-ui.js';
 
 export async function qt_runRead() {
   const key = (globalThis.qt_API_KEY || document.getElementById('api-key').value).trim();
@@ -114,6 +114,25 @@ export async function qt_runRead() {
   }
 }
 
+export function qt_toggleKey() {
+  const input = document.getElementById('api-key');
+  if (!input) return;
+  input.type = input.type === 'password' ? 'text' : 'password';
+  const btn = document.getElementById('key-toggle');
+  if (btn) btn.textContent = input.type === 'password' ? '👁' : '🙈';
+}
+
+window.qt_runRead = qt_runRead;
+window.qt_onFileChange = qt_onFileChange;
+window.qt_onDrop = qt_onDrop;
+window.qt_onDragOver = qt_onDragOver;
+window.qt_onDragLeave = qt_onDragLeave;
+window.qt_setFile = qt_setFile;
+window.qt_extractPdfPages = qt_extractPdfPages;
+window.qt_showPageModal = qt_showPageModal;
+window.qt_closePageModal = qt_closePageModal;
+window.qt_toggleKey = qt_toggleKey;
+
 globalThis.qt_runRead = qt_runRead;
 globalThis.qt_onFileChange = qt_onFileChange;
 globalThis.qt_onDrop = qt_onDrop;
@@ -122,6 +141,49 @@ globalThis.qt_onDragLeave = qt_onDragLeave;
 globalThis.qt_setFile = qt_setFile;
 globalThis.qt_extractPdfPages = qt_extractPdfPages;
 globalThis.qt_showPageModal = qt_showPageModal;
+globalThis.qt_closePageModal = qt_closePageModal;
+globalThis.qt_toggleKey = qt_toggleKey;
+window.qt_setPhase = qt_setPhase;
+window.qt_goBack = qt_goBack;
+window.qt_goReview = qt_goReview;
+window.qt_setStatus = qt_setStatus;
+window.qt_showError = qt_showError;
+window.qt_hideError = qt_hideError;
+window.qt_setProgress = qt_setProgress;
+window.qt_getActiveChips = qt_getActiveChips;
+window.qt_toggleChip = qt_toggleChip;
+window.qt_toggleCalcChip = qt_toggleCalcChip;
+window.qt_getCalcOptions = qt_getCalcOptions;
+window.qt_renderReview = qt_renderReview;
+window.qt_updateField = qt_updateField;
+window.qt_setStirrupType = qt_setStirrupType;
+window.qt_setSecStirrupType = qt_setSecStirrupType;
+window.qt_addLengthGroup = qt_addLengthGroup;
+window.qt_removeLengthGroup = qt_removeLengthGroup;
+window.qt_addSection = qt_addSection;
+window.qt_deleteElement = qt_deleteElement;
+window.qt_addElement = qt_addElement;
+
+globalThis.qt_setPhase = qt_setPhase;
+globalThis.qt_goBack = qt_goBack;
+globalThis.qt_goReview = qt_goReview;
+globalThis.qt_setStatus = qt_setStatus;
+globalThis.qt_showError = qt_showError;
+globalThis.qt_hideError = qt_hideError;
+globalThis.qt_setProgress = qt_setProgress;
+globalThis.qt_getActiveChips = qt_getActiveChips;
+globalThis.qt_toggleChip = qt_toggleChip;
+globalThis.qt_toggleCalcChip = qt_toggleCalcChip;
+globalThis.qt_getCalcOptions = qt_getCalcOptions;
+globalThis.qt_renderReview = qt_renderReview;
+globalThis.qt_updateField = qt_updateField;
+globalThis.qt_setStirrupType = qt_setStirrupType;
+globalThis.qt_setSecStirrupType = qt_setSecStirrupType;
+globalThis.qt_addLengthGroup = qt_addLengthGroup;
+globalThis.qt_removeLengthGroup = qt_removeLengthGroup;
+globalThis.qt_addSection = qt_addSection;
+globalThis.qt_deleteElement = qt_deleteElement;
+globalThis.qt_addElement = qt_addElement;
 
 if (typeof document !== 'undefined') {
   const fileInput = document.getElementById('file-input');

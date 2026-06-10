@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<body>
+  <script type="module">
+    import { simulateFlow, getDemoDataByEngine } from './demo-seed.js';
+
+    // ดู flow ทั้งหมดใน console
+    simulateFlow();
+
+    // หรือดึงแค่ engine เดียว แล้วแสดงใน page
+    const data = getDemoDataByEngine('quantitake');
+    console.log('BOQ input:', data.drawing_elements);
+    console.log('Expected output:', data.expected_boq);
+  </script>
+</body>
+</html>
