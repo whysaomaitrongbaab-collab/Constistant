@@ -19,7 +19,7 @@ import {
 import { STORAGE_KEYS } from '../shared/pipeline.js';
 import { loadMaterialPrices } from '../catalog/material-catalog.js';
 import { exportToCSV, downloadCSV } from '../catalog/csv-utils.js';
-import { exportBOQtoPDF } from './boq-export.js';
+import { exportBOQToHTML } from './boq-export.js';
 
 const CSV_COLUMNS = [
   'item_code', 'description', 'work_category', 'unit', 'quantity',
@@ -373,7 +373,7 @@ function exportCSV() {
 }
 
 function exportPDF() {
-  exportBOQtoPDF(getCurrentProjectId());
+  exportBOQToHTML(getCurrentProjectId());
 }
 
 export const boqSummary = { init, refresh, exportCSV, exportPDF, linkCatalogPrices };
