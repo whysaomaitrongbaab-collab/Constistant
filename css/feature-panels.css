@@ -150,7 +150,45 @@
   margin-bottom: 12px;
 }
 
-/* Planner — Gantt timeline (pure SVG) */
+/* Planner — overall progress (EVM) in header */
+.pl-progress-overall { margin-top: 14px; max-width: 520px; }
+.pl-progress-overall__head { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; color: var(--color-text-secondary); margin-bottom: 6px; }
+.pl-progress-overall__head strong { font-size: 16px; color: var(--color-text-primary); font-variant-numeric: tabular-nums; }
+.pl-progress-overall__bar { height: 10px; border-radius: 999px; background: var(--color-border-default); overflow: hidden; }
+.pl-progress-overall__bar > span { display: block; height: 100%; background: linear-gradient(90deg, var(--color-primary), #10b981); border-radius: 999px; transition: width .3s ease; }
+
+/* Planner — Gantt timeline (HTML grid) */
+.gantt2 { width: 100%; font-size: 12px; }
+.gantt2__axis-row { display: flex; align-items: stretch; border-bottom: 1px solid var(--color-border-default); }
+.gantt2__corner { width: 200px; flex-shrink: 0; padding: 4px 8px; font-weight: 700; color: var(--color-text-secondary); font-size: 11px; text-transform: uppercase; letter-spacing: .5px; }
+.gantt2__axis { position: relative; flex: 1; height: 22px; min-width: 320px; }
+.gantt2__tick { position: absolute; top: 2px; transform: translateX(-2px); font-size: 11px; color: var(--color-text-secondary); white-space: nowrap; padding-left: 4px; border-left: 1px solid var(--color-border-default); height: 18px; }
+.gantt2__rows { display: flex; flex-direction: column; }
+.gantt2__row { display: flex; align-items: stretch; min-height: 30px; cursor: pointer; border-bottom: 1px solid var(--color-surface-row); }
+.gantt2__row:hover { background: var(--color-surface-row-hover); }
+.gantt2__rowlabel { width: 200px; flex-shrink: 0; display: flex; align-items: center; gap: 6px; padding: 4px 8px; overflow: hidden; }
+.gantt2__wbs { color: var(--color-text-disabled); font-variant-numeric: tabular-nums; font-size: 11px; flex-shrink: 0; }
+.gantt2__name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--color-text-primary); }
+.gantt2__icons { flex-shrink: 0; }
+.gantt2__lane { position: relative; flex: 1; min-width: 320px; }
+.gantt2__band { position: absolute; top: 0; bottom: 0; background: #ef4444; opacity: 0.07; pointer-events: none; }
+.gantt2__today { position: absolute; top: 0; bottom: 0; width: 0; border-left: 2px dashed #3b82f6; pointer-events: none; z-index: 2; }
+.gantt2__bar { position: absolute; top: 50%; transform: translateY(-50%); height: 16px; border-radius: 4px; overflow: hidden; z-index: 1; min-width: 3px; }
+.gantt2__bar-fill { position: absolute; top: 0; left: 0; height: 100%; border-radius: 4px 0 0 4px; }
+.gantt2__bar-pct { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); font-size: 10px; font-weight: 700; color: var(--color-text-primary); line-height: 1; }
+.gantt2__bar--critical { outline: 2px solid #ef4444; outline-offset: -2px; }
+.gantt2__bar--rain::after { content: ''; position: absolute; inset: 0; background-image: repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(59,130,246,.35) 3px, rgba(59,130,246,.35) 6px); pointer-events: none; }
+
+/* Planner — task detail modal */
+.pl-detail { width: 520px; }
+.pl-detail__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.pl-detail__head h2 { margin: 4px 0 0; font-size: 18px; }
+.pl-detail__progress { margin-bottom: 16px; }
+.pl-detail__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 18px; }
+.pl-detail__cell { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--color-surface-row); font-size: 13px; }
+.pl-detail__k { color: var(--color-text-secondary); }
+.pl-detail__v { color: var(--color-text-primary); font-weight: 600; text-align: right; }
+
 .fp-gantt { width: 100%; overflow-x: auto; }
 .fp-gantt__svg { width: 100%; min-width: 480px; height: auto; display: block; }
 .fp-gantt__legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 10px; font-size: 12px; color: var(--color-text-secondary); }

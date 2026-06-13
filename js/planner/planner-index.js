@@ -5,10 +5,10 @@
 // ห้ามสร้าง object เองตรงๆ — ใช้ factory function เสมอ ตามกติกาของ schema.js
 
 import { createScheduleTask, calcAdjustedDuration, createTimelineViewState, WORK_TYPE_HIERARCHY } from '../shared/schema.js';
-import { getDemoDataByEngine } from '../shared/demo-seed.js';
+import { getDemoDataByEngine, getDemoProject } from '../shared/demo-seed.js';
 import { projectStorageKey, getCurrentProjectId, DEMO_PROJECT_ID, PROJECT_EVENT } from '../shared/project-store.js';
 import { STORAGE_KEYS, PIPELINE_EVENT } from '../shared/pipeline.js';
-import { groupTasksByMode, shiftDependents, calculateBudgetImpact } from '../shared/timeline-engine.js';
+import { groupTasksByMode, shiftDependents, calculateBudgetImpact, computeEVM } from '../shared/timeline-engine.js';
 
 const STORAGE_KEY = STORAGE_KEYS.schedule;
 
@@ -32,8 +32,34 @@ const WORK_TYPE_COLORS = {
   mep: '#0891b2', finishing: '#16a34a', other: '#64748b',
 };
 
+const WEATHER_RISK_LABEL = { none: 'ปกติ', low: 'ต่ำ', medium: 'ปานกลาง', high: 'สูง (ฤดูฝน)' };
+
 let tasks = [];
 let viewState = null;
+let openDetailId = null; // task id ที่เปิด detail modal อยู่ (null = ปิด)
+
+function perfColor(v) {
+  if (v == null) return '#94a3b8';
+  if (v >= 1) return '#10b981';
+  if (v >= 0.9) return '#f59e0b';
+  return '#ef4444';
+}
+function perfTone(v) {
+  if (v == null) return '-';
+  if (v >= 1) return 'ดีกว่าแผน';
+  if (v >= 0.9) return 'เฝ้าระวัง';
+  return 'ต่ำกว่าแผน';
+}
+function hexToRgba(hex, a) {
+  const h = (hex || '#94a3b8').replace('#', '');
+  const full = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+  const n = parseInt(full, 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
+function formatThaiDate(d) {
+  if (!d) return '-';
+  return new Date(d).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' });
+}
 
 function loadTasks() {
   try {
@@ -84,6 +110,8 @@ function loadProjectConfig() {
   } catch (e) {
     console.error('[planner] failed to load project_config', e);
   }
+  // โปรเจกต์สาธิต: ใช้ config จาก demo-seed (มี rainy_season_months/timeline สำหรับ overlay)
+  if (getCurrentProjectId() === DEMO_PROJECT_ID) return getDemoProject().project_config;
   return null;
 }
 
@@ -109,17 +137,52 @@ function render() {
   const totalDays = tasks.reduce((sum, t) => sum + (t.adjusted_duration_days ?? t.base_duration_days ?? 0), 0);
   const projectConfig = loadProjectConfig();
   const groups = tasks.length ? groupTasksByMode(tasks, viewState.grouping_mode, projectConfig) : [];
+  const evm = computeEVM(tasks);
+  const projectEnd = tasks.reduce((m, t) => (t.end_date && (!m || t.end_date > m) ? t.end_date : m), null);
+  const showEvm = evm && !evm.not_started;
 
   root.innerHTML = `
     <div class="fp-header">
       <h1>📅 Planner</h1>
-      <p>วางแผนงาน กำหนดไทม์ไลน์ และติดตามความคืบหน้า — duration ปรับด้วย weather buffer แล้ว</p>
+      <p>ภาพรวมงานก่อสร้างสำหรับวิศวกรสนาม — คลิกที่แถบงานในไทม์ไลน์เพื่อดูรายละเอียด</p>
       <div class="fp-summary">
         <span class="fp-pill" style="background:#3b82f622;color:#3b82f6">📋 ${tasks.length} กิจกรรม</span>
-        <span class="fp-pill" style="background:#ef444422;color:#ef4444">🔥 ${criticalCount} critical path</span>
+        <span class="fp-pill" style="background:#ef444422;color:#ef4444">🔥 ${criticalCount} critical</span>
         <span class="fp-pill" style="background:#10b98122;color:#10b981">⏱️ รวม ${totalDays.toFixed(1)} วัน</span>
+        ${projectEnd ? `<span class="fp-pill" style="background:#64748b22;color:#475569">🏁 เสร็จ ${formatThaiDate(projectEnd)}</span>` : ''}
+        ${showEvm ? `
+          <span class="fp-pill" style="background:${perfColor(evm.spi)}22;color:${perfColor(evm.spi)}" title="Schedule Performance Index — เทียบมูลค่างานที่ทำได้กับแผน">SPI ${evm.spi} · ${perfTone(evm.spi)}</span>
+          <span class="fp-pill" style="background:${perfColor(evm.cpi)}22;color:${perfColor(evm.cpi)}" title="Cost Performance Index — เทียบมูลค่างานที่ทำได้กับเงินที่จ่ายจริง">CPI ${evm.cpi} · ${perfTone(evm.cpi)}</span>
+        ` : ''}
       </div>
+      ${showEvm ? `
+      <div class="pl-progress-overall" title="ความคืบหน้าโครงการตามมูลค่างาน (Earned Value)">
+        <div class="pl-progress-overall__head"><span>ความคืบหน้าโครงการ (ตามมูลค่างาน)</span><strong>${evm.percent_complete}%</strong></div>
+        <div class="pl-progress-overall__bar"><span style="width:${Math.min(100, evm.percent_complete)}%"></span></div>
+      </div>` : ''}
     </div>
+
+    ${diffChip ? `<div class="pl-diff-chip">${escapeHtml(diffChip)}</div>` : ''}
+
+    ${tasks.length === 0 ? `
+    <div class="fp-card"><p class="fp-empty">ยังไม่มีกิจกรรม — เพิ่มกิจกรรมด้านล่าง หรือกด "Calculate Project" เพื่อให้ระบบสร้างแผนงานจากแบบก่อสร้าง</p></div>` : `
+    <div class="fp-card">
+      <h2>📊 ไทม์ไลน์งาน (Gantt) — คลิกที่แถบงานเพื่อดูรายละเอียด</h2>
+      ${renderGantt(tasks, projectConfig)}
+      ${renderGanttLegend(projectConfig)}
+    </div>
+
+    <div class="fp-card">
+      <div class="pl-card-header">
+        <h2>ตารางงาน (แก้ไขรายละเอียด)</h2>
+        <div class="pl-grouping-toggle">
+          ${Object.entries(GROUPING_LABEL).map(([mode, label]) => `
+            <button type="button" class="fp-btn-secondary pl-grouping-btn${viewState.grouping_mode === mode ? ' pl-grouping-btn--active' : ''}" onclick="pl_setGrouping('${mode}')">${label}</button>
+          `).join('')}
+        </div>
+      </div>
+      ${groups.map(renderGroupTable).join('')}
+    </div>`}
 
     <div class="fp-card">
       <h2>เพิ่มกิจกรรม</h2>
@@ -166,26 +229,7 @@ function render() {
       <button class="fp-btn-primary" onclick="pl_addTask()">+ เพิ่มกิจกรรม</button>
     </div>
 
-    ${diffChip ? `<div class="pl-diff-chip">${escapeHtml(diffChip)}</div>` : ''}
-
-    <div class="fp-card">
-      <div class="pl-card-header">
-        <h2>ตารางงานทั้งหมด</h2>
-        <div class="pl-grouping-toggle">
-          ${Object.entries(GROUPING_LABEL).map(([mode, label]) => `
-            <button type="button" class="fp-btn-secondary pl-grouping-btn${viewState.grouping_mode === mode ? ' pl-grouping-btn--active' : ''}" onclick="pl_setGrouping('${mode}')">${label}</button>
-          `).join('')}
-        </div>
-      </div>
-      ${tasks.length === 0 ? '<p class="fp-empty">ยังไม่มีกิจกรรม</p>' : groups.map(renderGroupTable).join('')}
-    </div>
-
-    ${tasks.length === 0 ? '' : `
-    <div class="fp-card">
-      <h2>📊 Gantt Timeline</h2>
-      <div id="planner-gantt" class="fp-gantt">${renderGanttSVG(tasks, projectConfig)}</div>
-      ${renderGanttLegend(projectConfig)}
-    </div>`}
+    ${openDetailId ? renderDetailModal(tasks.find(t => t.id === openDetailId)) : ''}
   `;
 }
 
@@ -196,79 +240,170 @@ function render() {
  */
 function renderGanttSVG(tasks, projectConfig) {
   const timeline = projectConfig?.timeline;
-  const sortedByStart = [...tasks].sort((a, b) => (a.start_date || '').localeCompare(b.start_date || ''));
-  const startDate = new Date(timeline?.user_start_date || sortedByStart[0]?.start_date || Date.now());
-  const sortedByEnd = [...tasks].sort((a, b) => (b.end_date || '').localeCompare(a.end_date || ''));
-  const endDate = new Date(timeline?.user_end_date || sortedByEnd[0]?.end_date || Date.now());
-  const totalDays = Math.max(1, (endDate - startDate) / 86400000);
+  const withDates = tasks.filter(t => t.start_date && t.end_date);
+  if (!withDates.length) return null;
 
-  const rowHeight = 28;
-  const chartWidth = 800;
-  const dayWidth = chartWidth / totalDays;
-  const chartHeight = sortedByStart.length * rowHeight + 40;
+  const starts = withDates.map(t => +new Date(t.start_date));
+  const ends = withDates.map(t => +new Date(t.end_date));
+  // ปรับขอบเวลาให้พอดีกับช่วงงานจริง (อ่านแท่งง่าย) — ไม่ยืดไปถึง user_end_date ที่อาจห่างมาก
+  let min = Math.min(...starts);
+  let max = Math.max(...ends);
+  // เผื่อขอบ 2 วันซ้าย-ขวา เพื่อไม่ให้แท่งงานชนขอบ
+  min -= 2 * 86400000;
+  max += 2 * 86400000;
+  const span = Math.max(max - min, 86400000);
+  const pct = (ms) => ((ms - min) / span) * 100;
 
-  const dayOffset = (dateStr) => Math.max(0, (new Date(dateStr) - startDate) / 86400000);
+  return { min, max, span, pct, rainyMonths: timeline?.rainy_season_months || [], withDates };
+}
 
-  // Rainy-season overlay bands — แท่งสีแดงโปร่งใส 1 แท่งต่อเดือนที่อยู่ในฤดูฝน
-  const rainyMonths = timeline?.rainy_season_months || [];
-  const overlayBands = [];
-  if (rainyMonths.length) {
-    const cursor = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
-    while (cursor <= endDate) {
-      const month = cursor.getMonth() + 1;
-      if (rainyMonths.includes(month)) {
-        const monthStart = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
-        const monthEnd = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0);
-        const x1 = Math.max(0, dayOffset(monthStart.toISOString().slice(0, 10))) * dayWidth;
-        const x2 = Math.min(totalDays, dayOffset(monthEnd.toISOString().slice(0, 10)) + 1) * dayWidth;
-        if (x2 > x1) overlayBands.push(`<rect x="${x1.toFixed(1)}" y="0" width="${(x2 - x1).toFixed(1)}" height="${chartHeight}" fill="#ef4444" opacity="0.08"/>`);
-      }
-      cursor.setMonth(cursor.getMonth() + 1);
+/**
+ * Gantt timeline แบบ HTML (อ่านง่าย, มีคอลัมน์ชื่องาน + แกนเวลา + แถบ % เสร็จ + คลิกดูรายละเอียด)
+ * - แถบงานยาวตามช่วงวันที่จริง, สีตาม work_type, ส่วนที่ทำเสร็จเป็นสีเข้ม (percent_complete)
+ * - critical path = เส้นขอบแดง, weather_risk='high' = ลายทางฝน
+ * - overlay: แถบฤดูฝน + เส้น "วันนี้" ลากตลอดความสูง (วาดซ้ำในแต่ละ lane ให้ต่อเนื่อง)
+ */
+function renderGantt(tasks, projectConfig) {
+  const model = renderGanttSVG(tasks, projectConfig);
+  if (!model) return '<p class="fp-empty">ไม่มีกิจกรรมที่มีวันที่กำหนด</p>';
+  const { min, max, pct, rainyMonths } = model;
+  const sorted = [...model.withDates].sort((a, b) => (a.start_date || '').localeCompare(b.start_date || ''));
+
+  // แกนเวลา (ป้ายเดือน)
+  const ticks = [];
+  const cursor = new Date(min);
+  cursor.setDate(1);
+  cursor.setHours(0, 0, 0, 0);
+  while (+cursor <= max) {
+    const left = pct(+cursor);
+    if (left >= -2 && left <= 100) {
+      ticks.push(`<div class="gantt2__tick" style="left:${left.toFixed(2)}%">${cursor.toLocaleDateString('th-TH', { month: 'short' })}</div>`);
     }
+    cursor.setMonth(cursor.getMonth() + 1);
   }
 
-  // Today marker
-  const todayOffset = dayOffset(new Date().toISOString().slice(0, 10));
-  const todayLine = todayOffset >= 0 && todayOffset <= totalDays
-    ? `<line x1="${(todayOffset * dayWidth).toFixed(1)}" y1="0" x2="${(todayOffset * dayWidth).toFixed(1)}" y2="${chartHeight}" stroke="#3b82f6" stroke-width="2" stroke-dasharray="4,2"/>`
-    : '';
+  // overlay: แถบฤดูฝน + เส้นวันนี้ (วาดในทุก lane → ต่อเนื่องเป็นเส้นแนวตั้ง)
+  const bands = [];
+  if (rainyMonths.length) {
+    const m = new Date(min);
+    m.setDate(1);
+    m.setHours(0, 0, 0, 0);
+    while (+m <= max) {
+      if (rainyMonths.includes(m.getMonth() + 1)) {
+        const mStart = new Date(m.getFullYear(), m.getMonth(), 1);
+        const mEnd = new Date(m.getFullYear(), m.getMonth() + 1, 1);
+        const l = Math.max(0, pct(+mStart));
+        const r = Math.min(100, pct(+mEnd));
+        if (r > l) bands.push(`<div class="gantt2__band" style="left:${l.toFixed(2)}%;width:${(r - l).toFixed(2)}%"></div>`);
+      }
+      m.setMonth(m.getMonth() + 1);
+    }
+  }
+  const todayPct = pct(Date.now());
+  const todayLine = todayPct >= 0 && todayPct <= 100 ? `<div class="gantt2__today" style="left:${todayPct.toFixed(2)}%"></div>` : '';
+  const overlay = `${bands.join('')}${todayLine}`;
 
-  // Task bars — สีตาม work_type, ลายทางถ้า weather_risk='high', เส้นขอบแดงถ้า critical path
-  const bars = sortedByStart.map((t, i) => {
-    if (!t.start_date) return '';
-    const x = dayOffset(t.start_date) * dayWidth;
-    const w = Math.max(2, (t.adjusted_duration_days || t.base_duration_days || 1) * dayWidth);
-    const y = i * rowHeight + 8;
+  const rows = sorted.map(t => {
+    const l = Math.max(0, pct(+new Date(t.start_date)));
+    const r = Math.min(100, pct(+new Date(t.end_date)));
+    const w = Math.max(0.8, r - l);
     const color = WORK_TYPE_COLORS[t.work_type] || '#94a3b8';
-    const riskStripe = t.weather_risk === 'high'
-      ? `<rect x="${x.toFixed(1)}" y="${y}" width="${w.toFixed(1)}" height="12" fill="url(#rain-stripe)"/>`
-      : '';
-    const criticalStroke = (t.is_critical || t.is_critical_path) ? ' stroke="#ef4444" stroke-width="1.5"' : '';
-    const label = escapeHtml(t.activity_name).slice(0, Math.max(0, Math.floor(w / 6)));
-    return `<g style="cursor:pointer">
-      <rect x="${x.toFixed(1)}" y="${y}" width="${w.toFixed(1)}" height="12" rx="3" fill="${color}"${criticalStroke}/>
-      ${riskStripe}
-      <text x="${(x + 4).toFixed(1)}" y="${y + 9}" font-size="9" fill="#fff">${label}</text>
-    </g>`;
+    const critical = t.is_critical || t.is_critical_path;
+    const rain = t.weather_risk === 'high';
+    const pctDone = Math.max(0, Math.min(100, t.percent_complete || 0));
+    const icons = `${critical ? '🔥' : ''}${rain ? '🌧️' : ''}`;
+    return `
+      <div class="gantt2__row" onclick="pl_showDetail('${t.id}')" title="${escapeHtml(t.activity_name)} — คลิกดูรายละเอียด">
+        <div class="gantt2__rowlabel">
+          <span class="gantt2__wbs">${escapeHtml(t.wbs_code || '')}</span>
+          <span class="gantt2__name">${escapeHtml(t.activity_name)}</span>
+          ${icons ? `<span class="gantt2__icons">${icons}</span>` : ''}
+        </div>
+        <div class="gantt2__lane">
+          ${overlay}
+          <div class="gantt2__bar${critical ? ' gantt2__bar--critical' : ''}${rain ? ' gantt2__bar--rain' : ''}" style="left:${l.toFixed(2)}%;width:${w.toFixed(2)}%;background:${hexToRgba(color, 0.28)}">
+            <div class="gantt2__bar-fill" style="width:${pctDone}%;background:${color}"></div>
+            <span class="gantt2__bar-pct">${pctDone > 0 ? pctDone + '%' : ''}</span>
+          </div>
+        </div>
+      </div>`;
   }).join('');
 
-  return `<svg viewBox="0 0 ${chartWidth} ${chartHeight}" class="fp-gantt__svg" preserveAspectRatio="xMinYMin meet">
-    <defs><pattern id="rain-stripe" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-      <rect width="6" height="6" fill="#3b82f6" opacity="0.15"/><rect width="3" height="6" fill="#3b82f6" opacity="0.3"/>
-    </pattern></defs>
-    ${overlayBands.join('')}
-    ${bars}
-    ${todayLine}
-  </svg>`;
+  return `
+    <div class="gantt2">
+      <div class="gantt2__axis-row">
+        <div class="gantt2__corner">กิจกรรม</div>
+        <div class="gantt2__axis">${ticks.join('')}</div>
+      </div>
+      <div class="gantt2__rows">${rows}</div>
+    </div>`;
+}
+
+/**
+ * รายละเอียดงาน (modal) เมื่อคลิกแถบใน Gantt — สรุปทุกฟิลด์ที่วิศวกรสนามต้องดู
+ */
+function renderDetailModal(task) {
+  if (!task) return '';
+  const dur = task.adjusted_duration_days ?? task.base_duration_days ?? 0;
+  const base = task.base_duration_days ?? dur;
+  const buffer = Math.max(0, (task.adjusted_duration_days ?? base) - base);
+  const pctDone = Math.max(0, Math.min(100, task.percent_complete || 0));
+  const est = task.task_cost_estimate;
+  const act = task.task_cost_actual;
+  const fmtTHB = (n) => `฿${Math.round(n).toLocaleString('th-TH')}`;
+
+  const rows = [
+    ['WBS', task.wbs_code || '-'],
+    ['หมวดงาน', categoryMeta(task.work_category).label],
+    ['ชั้น', task.floor_level || '-'],
+    ['วันที่เริ่ม', formatThaiDate(task.start_date)],
+    ['วันที่สิ้นสุด', formatThaiDate(task.end_date)],
+    ['ระยะเวลา', dur ? `${dur.toFixed(1)} วัน` : '-'],
+    ['เผื่ออากาศ', buffer > 0.04 ? `+${buffer.toFixed(1)} วัน` : '—'],
+    ['ความเสี่ยงอากาศ', WEATHER_RISK_LABEL[task.weather_risk] || task.weather_risk || '-'],
+    ['ทีมงาน (crew)', task.crew_size ?? '-'],
+    ['Productivity', task.productivity_rate != null ? `${task.productivity_rate} หน่วย/คน/วัน` : '-'],
+    ['ปริมาณงาน', task.quantity != null ? `${task.quantity} ${task.unit || ''}`.trim() : '-'],
+    ['ต้นทุนประมาณ', est != null ? fmtTHB(est) : '-'],
+    ['ต้นทุนจริง', act != null ? fmtTHB(act) : 'ยังไม่ระบุ'],
+    ['สั่งวัสดุภายใน', formatThaiDate(task.material_order_date)],
+    ['Critical path', critical(task) ? '🔥 ใช่' : 'ไม่'],
+  ];
+
+  return `
+    <div class="modal-overlay" onclick="if(event.target===this)pl_closeDetail()">
+      <div class="modal-card pl-detail">
+        <div class="pl-detail__head">
+          <div>
+            <div class="rc-item-type">${categoryMeta(task.work_category).label}</div>
+            <h2>${escapeHtml(task.activity_name)}</h2>
+          </div>
+          <button class="rh-delete" onclick="pl_closeDetail()" title="ปิด">✕</button>
+        </div>
+        <div class="pl-detail__progress">
+          <div class="pl-progress-overall__head"><span>ความคืบหน้า</span><strong>${pctDone}%</strong></div>
+          <div class="pl-progress-overall__bar"><span style="width:${pctDone}%"></span></div>
+        </div>
+        <div class="pl-detail__grid">
+          ${rows.map(([k, v]) => `<div class="pl-detail__cell"><span class="pl-detail__k">${k}</span><span class="pl-detail__v">${escapeHtml(String(v))}</span></div>`).join('')}
+        </div>
+      </div>
+    </div>`;
+}
+
+function critical(task) {
+  return !!(task.is_critical || task.is_critical_path);
 }
 
 function renderGanttLegend(projectConfig) {
   const workTypeSwatches = Object.entries(WORK_TYPE_HIERARCHY).map(([key, def]) => `
     <span class="fp-gantt__legend-item"><span class="fp-gantt__swatch" style="background:${WORK_TYPE_COLORS[key] || '#94a3b8'}"></span>${escapeHtml(def.label_th)}</span>
   `).join('');
-  const rainySwatch = `<span class="fp-gantt__legend-item"><span class="fp-gantt__swatch" style="background:#ef4444;opacity:0.3"></span>ช่วงฤดูฝน</span>`;
+  const doneSwatch = `<span class="fp-gantt__legend-item"><span class="fp-gantt__swatch" style="background:linear-gradient(90deg,#1d4ed8 60%,${hexToRgba('#1d4ed8', 0.28)} 60%)"></span>เนื้องานที่ทำเสร็จ (เข้ม)</span>`;
+  const criticalSwatch = `<span class="fp-gantt__legend-item"><span class="fp-gantt__swatch" style="background:transparent;outline:2px solid #ef4444;outline-offset:-2px"></span>Critical path 🔥</span>`;
+  const rainySwatch = `<span class="fp-gantt__legend-item"><span class="fp-gantt__swatch" style="background:#ef4444;opacity:0.3"></span>ช่วงฤดูฝน 🌧️</span>`;
   const todaySwatch = `<span class="fp-gantt__legend-item"><span class="fp-gantt__swatch fp-gantt__swatch--line" style="border-color:#3b82f6"></span>วันนี้</span>`;
-  return `<div class="fp-gantt__legend">${workTypeSwatches}${rainySwatch}${todaySwatch}</div>`;
+  return `<div class="fp-gantt__legend">${workTypeSwatches}${doneSwatch}${criticalSwatch}${rainySwatch}${todaySwatch}</div>`;
 }
 
 function renderGroupTable(group) {
@@ -430,6 +565,17 @@ function broadcastProgress() {
   }));
 }
 
+// เปิด/ปิด modal รายละเอียดงาน (คลิกจากแถบ Gantt)
+export function pl_showDetail(id) {
+  openDetailId = id;
+  render();
+}
+
+export function pl_closeDetail() {
+  openDetailId = null;
+  render();
+}
+
 /**
  * แก้ไขวันที่ของ task แบบ reactive — เลื่อน dependent ทุกตัวตาม (shiftDependents)
  * คำนวณ budget impact ใหม่จาก project_config.timeline (ถ้ามี) แล้ว broadcast PIPELINE_EVENT
@@ -502,6 +648,8 @@ window.pl_setGrouping = pl_setGrouping;
 window.pl_updateTaskDate = pl_updateTaskDate;
 window.pl_updateProgress = pl_updateProgress;
 window.pl_updateActualCost = pl_updateActualCost;
+window.pl_showDetail = pl_showDetail;
+window.pl_closeDetail = pl_closeDetail;
 
 document.addEventListener('DOMContentLoaded', () => {
   tasks = loadTasks();
