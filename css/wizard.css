@@ -417,3 +417,248 @@
 body.wz-open {
   overflow: hidden;
 }
+
+/* ───────────────────────────────────────────── detailed manual entry */
+
+.wz-floor-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  border-bottom: 2px solid var(--color-border-default);
+  padding-bottom: 0;
+  overflow-x: auto;
+}
+
+.wz-floor-tab {
+  padding: 12px 16px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.wz-floor-tab:hover {
+  color: var(--color-text-primary);
+}
+
+.wz-floor-tab.active {
+  color: #2563eb;
+  border-bottom-color: #2563eb;
+}
+
+.wz-floor-count {
+  font-size: 12px;
+  color: #999;
+  margin-left: 4px;
+}
+
+.wz-floor-content {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 16px;
+}
+
+.wz-floor-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.wz-floor-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+  color: var(--color-text-primary);
+}
+
+.wz-elements-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.wz-element-card {
+  border: 1px solid var(--color-border-default);
+  border-radius: 8px;
+  padding: 12px;
+  background: #f9fafb;
+  transition: all 0.15s;
+}
+
+.wz-element-card:hover {
+  border-color: #2563eb;
+  background: #f0f4ff;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.12);
+}
+
+.wz-element-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+.wz-element-title {
+  font-weight: 600;
+  color: var(--color-text-primary);
+  font-size: 13px;
+}
+
+.wz-element-count {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-left: auto;
+}
+
+.wz-element-header .wz-icon-btn {
+  margin-left: auto;
+  padding: 4px;
+  font-size: 14px;
+}
+
+.wz-element-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.wz-summary-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+}
+
+.wz-summary-item span {
+  color: var(--color-text-secondary);
+}
+
+.wz-summary-total {
+  grid-column: 1 / -1;
+  padding-top: 6px;
+  border-top: 1px solid rgba(0,0,0,0.05);
+  color: #059669;
+  font-weight: 600;
+}
+
+.wz-add-element {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 12px;
+  background: #f0fdf4;
+  border: 1px dashed #86efac;
+  border-radius: 8px;
+}
+
+.wz-add-element label {
+  font-size: 12px;
+  font-weight: 500;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.wz-add-element select {
+  flex: 1;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border-default);
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.wz-empty {
+  text-align: center;
+  color: var(--color-text-secondary);
+  padding: 20px;
+  font-size: 12px;
+}
+
+/* detail form */
+.wz-element-form {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.wz-element-form[hidden] {
+  display: none;
+}
+
+.wz-form {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+
+.wz-form h4 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.wz-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.wz-form-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.wz-form-row input,
+.wz-form-row select {
+  padding: 8px;
+  border: 1px solid var(--color-border-default);
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.wz-form-section {
+  border: 1px solid var(--color-border-default);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.wz-form-section legend {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0 0 8px -4px;
+}
+
+.wz-form-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border-default);
+}
+
+.wz-form-actions button {
+  flex: 1;
+}

@@ -495,7 +495,7 @@ function computeResources(boqItems, scheduleTasks, project) {
   });
 
   Object.entries(totalConcreteM3ByType).forEach(([type, qty]) => {
-    const rate = CONCRETE_MATERIAL_RATE_THB[type] ?? 3400;
+    const rate = getConcretePrice(240)?.price ?? 3400;
     items.push(createResourceItem({
       id: `res-material-concrete-${type}`,
       project_id: project.id,

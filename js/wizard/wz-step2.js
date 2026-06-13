@@ -8,7 +8,7 @@
 import { workTypeFromElementType, WORK_TYPE_HIERARCHY } from '../shared/schema.js';
 import { getCurrentProjectId, projectStorageKey, getProjectElements, saveProjectElements } from '../shared/project-store.js';
 import { wz_ensureConfig, wz_saveConfig, wz_goToStep, wz_prevStep } from './wz-index.js';
-import { wz_renderManualFallback, wz_saveManualEntries } from './wz-manual-fallback.js';
+import { wz_renderManualDetailed, wz_saveManualElements } from './wz-manual-detailed.js';
 
 const UPLOADS_KEY = 'constistant_drawing_uploads_v1';
 
@@ -40,10 +40,10 @@ export function wz_renderStep2(root) {
         </div>
       </div>
     `;
-    wz_renderManualFallback(root.querySelector('#wz-manual-mount'));
+    wz_renderManualDetailed(root.querySelector('#wz-manual-mount'));
     root.querySelector('#wz-step2-back').addEventListener('click', () => wz_prevStep());
     root.querySelector('#wz-step2-next').addEventListener('click', () => {
-      wz_saveManualEntries();
+      wz_saveManualElements();
       sessionStorage.removeItem('wz_manual_mode');
       wz_goToStep(3);
     });
