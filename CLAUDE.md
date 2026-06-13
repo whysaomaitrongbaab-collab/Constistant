@@ -46,6 +46,7 @@ projects
 - `pipeline.js` — `runPipeline()`: BOQ → BBS → schedule → resources → readiness; fires `PIPELINE_EVENT`
 - `project-store.js` — multi-project localStorage via `projectStorageKey()`; fires `PROJECT_EVENT`
 - `timeline-engine.js` — duration estimation, budget impact, task grouping, weather buffer, `computeEVM()` (Earned Value Management: SPI/CPI/EAC/VAC + S-curve series from `schedule_tasks.percent_complete`/`task_cost_actual`)
+- `price-config.js` — **single source of truth for material pricing** (concrete, rebar, formwork, labor costs from CGD 2569); supports user overrides via `getEffectivePrice()` + localStorage, tracks `unit_price_source` ('cgd_2026' | 'manual' | 'upload')
 
 ### Feature modules (one folder per tab)
 | Folder | Tab / page | Prefix |
@@ -61,6 +62,30 @@ projects
 | `js/catalog/` | Material Catalog page | — |
 
 Drawing Intelligence loads its UI from `templates/drawing/quantitake-panel.html` at runtime via `drawing-index.js` → `qt_mountPanel()`.
+
+### Material Pricing System (`js/shared/price-config.js`, `js/boq/boq-export.js`)
+**Single source of truth for construction material costs** — replaces hardcoded rates across pipeline/BOQ/catalog.
+
+**Data hierarchy:**
+1. `MATERIAL_PRICES` in price-config.js — base prices from CGD 2569 (concrete: 180-350 ksc; rebar: SR24/SD30/SD40 all diameters; formwork; labor)
+2. User overrides — localStorage `constistant_price_override` (per material_key: `concrete.ready_mix_240`, `rebar.sd40_16`, etc.)
+3. Supabase `material_prices` table (future per-project pricing)
+
+**Functions:**
+- `getPriceByKey(material_key)` — retrieve base price
+- `getEffectivePrice(material_key)` — base price + user overrides
+- `saveLocalStorageOverride(material_key, price, source, note)` — user custom price
+- All exported to `window.*` for onclick handlers in Material Catalog UI
+
+**BOQ Export (`js/boq/boq-export.js` + `boq-print.css`):**
+- `exportBOQToHTML(projectId)` — government-standard format (mirrors "Boq Excel Template for public job.xlsm")
+- Pulls data from localStorage `STORAGE_KEYS.boq` (populated by pipeline)
+- Hierarchical WBS grouping by `category_code` + subtotals per category
+- Grand total + 7% VAT footer, signature blocks
+- Opens in new window with auto-triggered print dialog → PDF
+- Print CSS: A4 landscape, Sarabun + IBM Plex Mono, color-coded rows (category header #d4d4d4, subtotal #e8e8e8, grand total #1a4080)
+
+**Integration:** Pipeline reads prices via `getConcretePrice(ksc)`, `getRebarPrice(grade, dia_mm)`, `getFormworkPrice(element_type)` → tracks `unit_price_source` in BOQ items for traceability.
 
 ### Planner (`js/planner/`) — site-engineer overview
 Page is overview-first: header status strip (activity/critical counts, total days, project end date, SPI/CPI pills via `computeEVM()`, overall % -complete bar) → HTML-grid Gantt → editable task table → add-activity form.
