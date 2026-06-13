@@ -192,6 +192,10 @@
 .ov-table th { font-size: 11px; text-transform: uppercase; color: var(--color-text-secondary); letter-spacing: 0.5px; }
 .ov-table td.ov-num { text-align: right; font-variant-numeric: tabular-nums; }
 .ov-conf-badge { padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+.ov-budget-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.ov-budget__label { font-size: 12px; color: var(--color-text-secondary); font-weight: 600; margin-bottom: 6px; }
+.ov-budget__value { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.ov-budget__reason { margin: 12px 0 0; font-size: 13px; color: var(--color-text-secondary); }
 @media (max-width: 900px) {
   .ov-kpi-grid { grid-template-columns: repeat(2, 1fr); }
   .ov-charts-grid { grid-template-columns: 1fr; }
