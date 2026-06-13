@@ -21,6 +21,17 @@ const CHECK_TYPES = [
   { value: 'other', label: 'อื่นๆ' },
 ];
 
+// ลิงก์ไปแท็บที่แก้ไขรายการได้จริง ตามประเภทการตรวจสอบ (cross-tab action)
+const CHECK_NAV = {
+  drawing_complete: { module: 'Drawing Intelligence', label: 'ตรวจแบบใน Drawing Intelligence' },
+  bbs_ready:        { module: 'BBS', label: 'ดูตารางตัดเหล็ก (BBS)' },
+  material_lead:    { module: 'Resource Hub', label: 'จัดการวัสดุใน Resource Hub' },
+  crew_available:   { module: 'Resource Hub', label: 'จัดการแรงงานใน Resource Hub' },
+  weather_risk:     { module: 'Planner', label: 'ปรับแผนงานใน Planner' },
+  weather_overlap:  { module: 'Planner', label: 'ปรับแผนงานใน Planner' },
+  timeline_risk:    { module: 'Planner', label: 'ปรับแผนงานใน Planner' },
+};
+
 // red -> yellow -> green -> red เมื่อคลิกที่ status badge
 const STATUS_ORDER = ['red', 'yellow', 'green'];
 const STATUS_LABEL = { red: 'ไม่พร้อม', yellow: 'ต้องติดตาม', green: 'พร้อม' };
@@ -119,6 +130,7 @@ function render() {
 function renderCheckCard(c) {
   const typeLabel = (CHECK_TYPES.find(t => t.value === c.check_type) || {}).label || c.check_type || '';
   const color = STATUS_COLOR[c.status] || '#94a3b8';
+  const nav = CHECK_NAV[c.check_type];
   return `
     <div class="fp-card rc-item" style="border-left: 4px solid ${color}">
       <div class="rc-item-head">
@@ -131,6 +143,7 @@ function renderCheckCard(c) {
       <h3>${escapeHtml(c.title)}</h3>
       ${c.detail ? `<p class="rc-detail">${escapeHtml(c.detail)}</p>` : ''}
       ${c.recommendation && c.recommendation !== '-' ? `<p class="rc-recommend">💡 ${escapeHtml(c.recommendation)}</p>` : ''}
+      ${nav && c.status !== 'green' ? `<button class="rc-nav-link" onclick="rc_goto('${nav.module}')">${nav.label} →</button>` : ''}
     </div>
   `;
 }
@@ -175,10 +188,18 @@ export function rc_deleteCheck(id) {
   render();
 }
 
+// ไปยังแท็บที่แก้ไขรายการได้จริง (เรียก setActiveTab ของ shell)
+export function rc_goto(moduleName) {
+  if (typeof window.constistant_setActiveTab === 'function') {
+    window.constistant_setActiveTab(moduleName);
+  }
+}
+
 // expose ให้ inline onclick="" ใน HTML เรียกได้
 window.rc_addCheck = rc_addCheck;
 window.rc_cycleStatus = rc_cycleStatus;
 window.rc_deleteCheck = rc_deleteCheck;
+window.rc_goto = rc_goto;
 
 document.addEventListener('DOMContentLoaded', () => {
   checks = loadChecks();

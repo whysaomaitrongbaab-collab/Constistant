@@ -108,6 +108,19 @@
 .rc-item h3 { font-size: 14px; margin: 0 0 4px; }
 .rc-detail, .rc-recommend { font-size: 13px; margin: 4px 0 0; color: var(--color-text-secondary); }
 .rc-recommend { color: var(--color-primary); }
+.rc-nav-link {
+  display: inline-block;
+  margin-top: 8px;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--color-primary);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.rc-nav-link:hover { text-decoration: underline; }
 
 /* Resource Hub */
 .rh-table { width: 100%; border-collapse: collapse; font-size: 13px; }
